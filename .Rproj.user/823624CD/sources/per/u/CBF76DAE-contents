@@ -1,0 +1,138 @@
+
+table(Tagging$Effort$RelYear, Tagging$Effort$CapMethod, useNA = "ifany")
+table(Tagging$Effort$CapMethod, useNA = "ifany")
+
+View(table(Tagging$StripedBass$RelLoc, Tagging$StripedBass$CapMethod, useNA = "ifany"),
+     title = "LocationCheck")
+
+
+
+b3 <- with(data = Tagging[["StripedBass"]], expr = {
+  CapMethod %in% "FT" & RelLoc %in% 3
+})
+
+b16 <- with(data = Tagging[["StripedBass"]], expr = {
+  CapMethod %in% "GN" & RelLoc %in% 16
+})
+
+View(Tagging$StripedBass[b3,], title = "FTLoc3")
+unique(Tagging$StripedBass[b3, "RelDate"])
+
+View(Tagging$StripedBass[b16,], title = "GNLoc16")
+unique(Tagging$StripedBass[b16, "RelDate"])
+
+
+
+EffortSb(
+  data = Tagging[["Effort"]],
+  sTime = StartTime,
+  eTime = EndTime,
+  netNum = DriftTrap
+)
+
+test <- with(data = Tagging[["Effort"]], expr = {
+  difftime(time1 = EndTime, time2 = StartTime, units = "hours")
+})
+
+i <- which(test <= 0)
+i <- which(test > 100)
+i <- which(test > 1.5 & Tagging$Effort$CapMethod %in% 1)
+
+View(Tagging$Effort[i, ], title = "TimeCheck")
+write.table(Tagging$Effort[i, ], file = "clipboard", sep = "\t")
+write.table(1, file = "clipboard", sep = "\t")
+
+
+
+
+with(data = Tagging[["Effort"]], expr = {
+  b <- RelYear %in% 1994 # & is.na(CapMethod)
+  difftime(time1 = EndTime[b], time2 = StartTime[b], units = "hours")
+})
+
+with(data = Tagging[["Effort"]], expr = {
+  b <- CapMethod %in% 1
+  dt <- difftime(
+    time1 = EndTime[b],
+    time2 = StartTime[b],
+    units = "hours"
+  )
+  
+  # b1 <-  dt > 100
+  # plot(RelYear[b][b1], dt[b1])
+  # plot(RelYear[b], dt)
+  plot(jitter(RelYear[b]), dt, pch = 20, col = rgb(0, 0, 0, 0.1))
+  # dt[b1]
+  range(dt)
+})
+
+
+
+test2 <- Split(
+  data = Tagging$Effort,
+  subset = CapMethod %in% 1,
+  vars = DriftTrap,
+  splitVars = RelDate
+)
+
+tttt <- lapply(test2$Data, FUN = function(d) {
+  # table(d[["DriftTrap"]], useNA = "ifany")
+  
+  b <- duplicated(d[["DriftTrap"]])
+  
+  r <- table(factor(b, levels = c("TRUE", "FALSE")), d[["DriftTrap"]])
+  
+  r
+  
+})#$`2008-04-09`
+
+
+check <- vapply(test2$Data, FUN = function(d) {
+  # table(d[["DriftTrap"]], useNA = "ifany")
+  
+  b <- duplicated(d[["DriftTrap"]])
+  
+  r <- table(factor(b, levels = c("TRUE", "FALSE")), d[["DriftTrap"]])
+  
+  v <- r["TRUE",]
+  
+  if (any(r > 1)) return("MoreThan2")
+  
+  if (all(v == 0)) return("one_boat")
+  if (all(v == 1)) return("all_sets")
+  
+  
+  p1 <- Position(function(x) x == 0, x = v)
+  p11 <- Position(function(x) x == 0, x = v, right = T)
+  p2 <- Position(function(x) x == 1, x = v, right = T)
+  
+  # if (sum(v == 0) >= 2) return("check")
+  # if (any(diff(v) < 0)) return("check")
+  if (p2 > p1) return("missing_set")
+  if (p11 - p1 > 2) return("missing_last_sets")
+  
+  "hmm"
+  
+}, FUN.VALUE = character(1L))
+
+
+
+
+View(Tagging$StripedBass)
+
+table(Tagging$StripedBass$RelYear, Tagging$StripedBass$TagAction, useNA = "ifany")
+
+
+
+
+aggregate(RelFL ~ RelYear, data = Tagging$StripedBass,
+          subset = TagAction %in% 1 | is.na(TagAction), FUN = min)
+
+
+
+
+
+
+
+
+

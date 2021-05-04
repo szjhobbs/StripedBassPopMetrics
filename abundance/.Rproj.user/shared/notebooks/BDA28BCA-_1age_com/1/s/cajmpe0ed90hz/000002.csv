@@ -1,0 +1,7 @@
+"0",""
+"0","catch$BySex <- lapply("
+"0","  catch[[""Data""]],"
+"0","  FUN = Split,"
+"0","  # below: args passed to Split"
+"0","  splitVars = RelSex0,"
+"0","  drop = FALSE"

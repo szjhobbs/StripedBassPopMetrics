@@ -1,0 +1,27 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1570565009387.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "3|17|19|0|\n20|19|52|0|\n37|62|40|0|\n42|64|49|0|\n44|48|47|2|\n53|20|117|0|\n98|69|101|0|\n110|51|116|0|\n118|21|147|0|\n148|10|170|0|\n163|53|169|0|\n171|29|245|0|\n",
+    "hash" : "1224026459",
+    "id" : "A3CECE9B",
+    "lastKnownWriteTime" : 2314885530819567648,
+    "last_content_update" : 1580228434029,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "3,17",
+        "docOutlineVisible" : "1",
+        "scrollLine" : "0",
+        "tempName" : "Untitled2"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,6 @@
+"0",""
+"0","p_fyke <- Plot("
+"0","  x = catch[[""RelYear""]],"
+"0","  y = catch[[""FykeEstCI""]], "
+"0","  subset = catch[[""RelYear""]] >= 2010"
+"0",")"

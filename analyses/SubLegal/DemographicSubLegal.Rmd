@@ -1,0 +1,458 @@
+---
+title: "Striped Bass: Tag Returns from Sub-Legal at Tagging"
+output:
+   html_document:
+     df_print: paged
+   html_notebook: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+# for dataframe viewing
+knitr::opts_chunk$set(rows.print = 10, echo = FALSE)
+
+```
+
+```{r load-libs, warning=FALSE, message=FALSE}
+
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r source-files}
+
+# section: loads source files needed for analytics herein
+
+source("source/methods_len_freq.R")
+source("source/functions_sub-legal.R")
+
+```
+
+```{r load-data}
+
+# section: loads all necessary data with some subsetting & re-formatting
+
+# from mark-recaptured database (see ImportTaggingData.R)
+StriperAll <- readRDS(file = "data/tagging/StriperAll.rds")
+AnglerReturns <- readRDS(file = "data/tagging/SBAnglerReturns.rds")
+
+# for ease of analytics
+AnglerReturns$RelYear <- format(as.Date(AnglerReturns[["RelDate"]]), format = "%Y")
+
+# for analytics
+Tagged2010Pres <- subset(
+  StriperAll,
+  # subset = RelYear > 2009 & Method %in% "FT"
+  subset = RelYear > 2009
+)
+
+# for ease of analytics & plotting
+Tagged2010Pres$FLCat <- NA_character_
+Tagged2010Pres$FLCat[Tagged2010Pres[["FL"]] >= 42] <- "leg"
+Tagged2010Pres$FLCat[Tagged2010Pres[["FL"]] < 42] <- "sub"
+
+# want only tag returns from 2010- (when we began tagging sub-legal sized fish)
+Returns2010Pres <- subset(
+  AnglerReturns,
+  subset = RelYear > 2009
+  # subset = as.Date(RelDate) > "2009-12-31"
+)
+
+# some anglers report length in metrics (this is the conversion to standard for
+# consistency with most angler reporting)
+bool_metric <- Returns2010Pres[["IsMetric"]] == 1
+
+Returns2010Pres[["RecFLIn"]][bool_metric] <-
+  Returns2010Pres[["RecFLIn"]][bool_metric] / 2.54
+
+# to show record of when gill netting - not used
+# Tagged2010Pres[Tagged2010Pres[["Method"]] %in% "GN",]
+
+```
+
+##Introduction
+In 2010, we began tagging sub-legal sized Striped Bass (i.e., < 42 cm fork length[FL]). Herein, we summarize sub-legal tagging (release) data and return (i.e., angler tag return) data to learn some about catch & release and learn more about this demographic of Striped Bass.
+
+##Catch
+Below, we show all Striped Bass caught and measured, less recaptures (i.e., within season and previous seasons). `Count` and `Prop` fields include only measured fish. (`Subs` < 42 cm FL; `Legs` &ge; 42 cm FL)
+
+*Note*: 2018 data are incomplete (i.e., data entry ongoing) and will certainly change
+
+*Note*: data are mostly from fyke trap tagging (in Knights Landing). Since 2010, we've tagged only one day using gill nets (2011-Apr-19, where we caught 17 Striped Bass, of which we tagged 16).
+
+*Note*: in 2014 we did not tag Striped Bass
+
+```{r caught}
+
+all_summary <- Tagged2010Pres %>% 
+  filter(TagAction != 2) %>% 
+  group_by(RelYear) %>% 
+  summarise(
+    AllCaught = sum(Count),
+    AllMeas = sum(!is.na(FL)),
+    CountSubs = sum(FL < 42, na.rm = TRUE),
+    PropSubs = mean(FL < 42, na.rm = TRUE),
+    CountLegs = sum(FL >= 42, na.rm = TRUE),
+    PropLegs = mean(FL >= 42, na.rm = TRUE)
+  )
+
+as.data.frame(all_summary)
+
+```
+
+Here we present length-frequency distributions by year. Number represents the number of sub-legal Striped Bass caught and measured.
+
+```{r lf-dist, fig.height=7, fig.width=6, message=FALSE, warning=FALSE}
+
+# with(data = Tagged2010Pres, expr = {
+#   tapply(FL, INDEX = RelYear, FUN = function(x) sum(x == 0, na.rm = TRUE))
+#   # tapply(FL, INDEX = RelYear, FUN = function(x) sum(x < 32, na.rm = TRUE))
+# })
+
+# generate len-freq list for graphic display
+lf <- GetLenFreq(
+  Tagged2010Pres,
+  colX = FL,
+  by = "RelYear",
+  seqBy = 5,
+  subset = FL != 0
+)
+
+# create lf-dist figure
+plot(
+  lf,
+  lens = FL,
+  fillBar = FLCat,
+  type = "POT",
+  addMed = TRUE
+) +
+  facet_wrap(facets = ~RelYear, ncol = 2) +
+  scale_fill_manual("", values = c(sub = "grey20", leg = "grey50")) +
+  theme(legend.position = "top") +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  xlab("Length bins (FL cm)") +
+  geom_text(
+    mapping = aes(label = paste0("n[sub]","=", CountSubs)),
+    data = all_summary,
+    hjust = 1,
+    family = "mono",
+    x = 122,
+    y = 0.3,
+    size = 3, parse = F
+  )
+
+```
+
+##Tagged Fish
+For only fish that were tagged (where field `TagAction` = 1), below are the count & proportions of sublegals (based on what was measured) along with some descriptive stats.
+
+```{r tagged}
+
+# count for tagged fish is always 1 so length(TagNum) or sum(Count) will work
+
+tagged <- Tagged2010Pres %>% 
+  filter(TagAction == 1) %>% 
+  # group_by(RelYear, TagAction) %>% 
+  group_by(RelYear) %>% 
+  summarise(
+    # AllTagged = length(TagNum[!is.na(FL)]),
+    AllTagged = length(TagNum),
+    CountSubs = sum(FL < 42, na.rm = TRUE),
+    PropSubs = mean(FL < 42, na.rm = TRUE),
+    MinSubLen = min(FL[FL < 42], na.rm = TRUE),
+    MaxSubLen = max(FL[FL < 42], na.rm = TRUE),
+    AvgSubLen = mean(FL[FL < 42], na.rm = TRUE),
+    SdSubLen = sd(FL[FL < 42], na.rm = TRUE)
+  )
+
+as.data.frame(tagged)
+
+```
+
+```{r testing, eval=FALSE, include=FALSE}
+
+Map(function(x) sum(is.na(x)), Returns2010Pres)
+
+# year_rel <- format(as.Date(AnglerReturns[["RelDate"]]), format = "%Y")
+
+with(data = Returns2010Pres, expr = {
+  
+  yr <- format(as.Date(RelDate), format = "%Y")
+  
+  table(RelYear = yr, RetYear, SubLeg = RelFL < 42, useNA = "ifany")
+})
+
+
+# with(data = subset(StriperAll, subset = RelYear > 2009), expr = {
+#   
+#   table(RelYear, TagAction, SubLeg = FL < 42, useNA = "ifany")
+# })
+
+```
+
+##Tag Returns
+Note: As data entry for 2018 is currently ongoing, we have not yet processed 2018 tag returns. But to date, we have received 10 returns from 2018 tagged fish.
+
+```{r returns}
+
+# Tagged2010Pres[Tagged2010Pres[["Method"]] %in% "GN",]
+# sort(Tagged2010Pres[Tagged2010Pres[["Method"]] %in% "GN", "FL"])
+# table(Returns2010Pres[["RelLoc"]], useNA = "ifany")
+
+# FIO, uncomment as needed *********************************
+# range(as.Date(Returns2010Pres[["RelDate"]]))
+# range(Returns2010Pres[["RetYear"]], na.rm = TRUE)
+# table(Returns2010Pres[["RelFL"]] < 42, useNA = "ifany")
+# **********************************************************
+
+# converting to factors for ease of analytics & plotting *************
+Returns2010Pres$RelVal <- factor(
+  Returns2010Pres[["RelVal"]],
+  levels = c("NR", "20", "50", "100")
+)
+
+Returns2010Pres$RetYear <- factor(
+  Returns2010Pres[["RetYear"]],
+  levels = 1:6,
+  # labels = c("1st", "2nd", "3rd", "4th", "5th", "6th")
+  # labels = c("Frst", "Scnd", "Thrd", "Frth", "Ffth", "Sxth")
+  labels = c("First", "Second", rep("Third+", times = 4))
+)
+
+# sets any NAs as unknown too
+Returns2010Pres$Fate <- factor(
+  Returns2010Pres[["Fate"]],
+  levels = c("K", "R", "U", NA),
+  labels = c("K", "R", "U", "U"),
+  exclude = NULL
+)
+# ********************************************************************
+
+# create a summary of returns (lists to be "unlisted" below)
+return_summary <- Returns2010Pres %>% 
+  group_by(Year = format(RelDate, format = "%Y")) %>% 
+  filter(RelFL < 42) %>% 
+  summarise(
+    CountTags = length(TagNum),
+    FLRange = list(range(RelFL, na.rm = TRUE)),
+    DALRange = list(range(DAL, na.rm = TRUE)),
+    CountRelVal = list(table(RelVal, useNA = "ifany")),
+    CountRelSex = list(table(RelSex, useNA = "ifany")),
+    CountFate = list(table(Fate, useNA = "ifany")),
+    CountRetYear = list(table(RetYear, useNA = "ifany")),
+    Locations = list(table(RelLoc, RecLoc, useNA = "ifany"))
+  )
+
+# FIO **********************************
+# return_summary[["DALRange"]]
+# return_summary[["Locations"]]
+# return_summary[["CountRelVal"]]
+# return_summary[["CountRetYear"]]
+# return_summary[["CountRelSex"]]
+# return_summary[["CountFate"]]
+# **************************************
+
+```
+
+Angler tag returns (of Striped Bass < 42 cm FL at tagging) for each release year (`Year`) by return year (`First`: caught within 365 days of tagging date; `Second`: caught between 365 and 730 days of tagging date; `Third+`: everything else beyond 730 days)
+
+```{r return-year}
+
+return_year <- data.frame(
+  Year = return_summary[["Year"]],
+  do.call(what = rbind, args = return_summary[["CountRetYear"]]),
+  stringsAsFactors = FALSE
+)
+
+colnames(return_year) <- c("Year", "First", "Second", "Third+")
+
+return_year
+
+```
+
+Angler tag returns (of Striped Bass < 42 cm FL at tagging) for each release year (`Year`) by fate (`K`: kept; `R`: released; `U`: unknown, angler did not supply info)
+
+```{r fate}
+
+data.frame(
+  Year = return_summary[["Year"]],
+  do.call(what = rbind, args = return_summary[["CountFate"]]),
+  stringsAsFactors = FALSE
+)
+
+```
+
+```{r returns_sub}
+
+# section: subsets Returns2010Pres for ease of analytics & calculates how many
+# fish per release year do not have an angler-reported length
+
+subleg_returns <- subset(Returns2010Pres, subset = RelFL < 42)
+
+bool_rec_len_na <- is.na(subleg_returns[["RecFLIn"]])
+# sum(bool_rec_len_na)
+
+# count by bool_rec_len_na for each release year
+with(data = subleg_returns, expr = {
+  
+  yr <- format(as.Date(RelDate), format = "%Y")
+  
+  table(Year = yr, ReturnLengthNA = bool_rec_len_na)
+  
+})
+
+```
+
+Figure shows angler reported length (inches) ~ fish length at tagged. Fish where no length reported by angler are not included in the figure below (see `TRUE` field in table above, `r sum(bool_rec_len_na)` in total).
+
+```{r plot-measured, fig.height=6, warning=FALSE}
+
+# section: 
+
+# with(data = subset(Returns2010Pres, subset = RelFL < 42), expr = {
+#   
+#   # table(RelFL, RecFLIn, Fate, useNA = "ifany")
+#   as.data.frame(table(RelFL, RecFLIn, Fate, useNA = "ifany"))
+#   
+# })
+
+# for a bit of offsetting on x-axis
+pd <- position_dodge(width = 0.5)
+
+ggplot(data = subleg_returns, mapping = aes(x = factor(RelFL), y = RecFLIn)) +
+  geom_hline(
+    mapping = aes(yintercept = 18),
+    colour = "grey20",
+    linetype = 2,
+    alpha = 3/5
+  ) +
+  geom_point(
+    mapping = aes(colour = Fate, shape = RetYear),
+    position = pd,
+    size = 2.75,
+    # alpha = 4/5,
+    stroke = 1.5
+  ) +
+  facet_wrap(facets = ~ format(RelDate, "%Y"), ncol = 2) +
+  scale_color_manual(
+    values = c(K = "orangered3", R = "grey25", U = "yellow4")
+  ) +
+  scale_shape_manual(
+    "Return",
+    values = c(First = 1, Second = 2, `Third+` = 0)
+  ) +
+  labs(
+    x = "Fork length (cm) at release",
+    y = "Angler-reported length (inches)"
+  )
+
+```
+
+##Analytics
+Here, we show some "quick-n-dirty" analyes using angler tag returns (returns) and CDFW tag recaptures (recaptures). Again, we've constrained the size limit to sub-legal (i.e., fork length < 42 cm) **at** tagging.
+
+We estimate survival rate, abundance, and catch & release rate according to the sections below. The table below shows (by release year, `RelYear`) count of returns, recaptures, and CDFW tag releases. Metadata (i.e., field descriptions) are provided below the table. 
+
+```{r count-rel_ret}
+
+years <- 2010:2018
+
+rel_ret_count <- GetRelRetCount(
+  mark = Tagged2010Pres,
+  recap = Returns2010Pres,
+  years = years
+)
+
+rel_ret_count$RR <- vapply(years, FUN = CountRecaps, FUN.VALUE = numeric(1L))
+
+rel_ret_count
+
+```
+
+Metadata provided for reference.
+
+```{r meta-rel_ret}
+
+attr(rel_ret_count$RR, which = "metadata") <- "CDFW within-season recaptures"
+
+metadata <- as.data.frame(
+  do.call(
+    what = rbind,
+    args = Map(function(x) attr(x, which = "metadata"), rel_ret_count)
+  )
+)
+
+colnames(metadata) <- ""
+metadata
+
+```
+
+####Survival
+We estimate survival rate using the equation below (Ricker 197X, xx.x). For this purpose, we do not include confidence intervals (CIs).
+
+$\hat{S}=\frac{R12\times M2}{M1\times R22}$
+
+```{r survival}
+
+# survival
+s_hat <- with(data = rel_ret_count, expr = {
+  (R12 * M2) / (M1 * R22)
+})
+
+data.frame(
+  RelYear = rel_ret_count[["RelYear"]],
+  SurvEst = round(s_hat, digits = 3)
+)
+
+```
+
+####Abundance
+We estimate abundance using the equation below (Ricker 197X, xx.x). For this purpose, we do not include confidence intervals (CIs).
+
+$\hat{N}=\frac{M1\times(C1+1)}{RR+1}$
+
+```{r abundance}
+
+# abundance (RR limited to within season recaps)
+abund <- with(data = rel_ret_count, expr = {
+  (M1 * (C1 + 1)) / (RR + 1)
+})
+
+data.frame(
+  RelYear = rel_ret_count[["RelYear"]],
+  # AbundEst = round(abund, digits = 0),
+  AbundEst = format(
+    abund,
+    digits = 0,
+    big.mark = ",",
+    scientific = FALSE
+  )
+)
+
+```
+
+####Catch & Release
+We calculate catch & release as the proportion (`p.R11r`) of tag returns reported as released (`R11r`) from the total tag returns (see `R11All` in table below). Total tag returns includes those where fate was not reported (`u`). `p.R11r` varies between ~35% and 67%.
+
+```{r catch-release}
+
+# for selecting specfic columns within rel_ret_count
+cols_R11 <- c("R11k", "R11r", "R11u")
+
+data.frame(
+  rel_ret_count[, c("RelYear", cols_R11)],
+  R11All = rowSums(rel_ret_count[, cols_R11], na.rm = TRUE),
+  p = round(
+    prop.table(as.matrix(rel_ret_count[, cols_R11]), margin = 1),
+    digits = 3
+  )
+)
+
+```
+
+---
+CDFW, SportFish Unit  
+ran: `r Sys.time()`

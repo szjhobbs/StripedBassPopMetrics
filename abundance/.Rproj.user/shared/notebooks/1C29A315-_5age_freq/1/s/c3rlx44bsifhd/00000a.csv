@@ -1,0 +1,4 @@
+"0",""
+"0","# clean up"
+"0","rm(nplots, ncols, nrows, lomatrix, lo, plot_len_age)"
+"0",""

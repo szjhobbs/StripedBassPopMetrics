@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1580228815913.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1579116027",
+    "id" : "6A556A5",
+    "lastKnownWriteTime" : 1582927965,
+    "last_content_update" : 1582927966546,
+    "path" : "~/RProjects/StripedBassPopMetrics/review/_1main.Rmd",
+    "project_path" : "review/_1main.Rmd",
+    "properties" : {
+        "cursorPosition" : "4,3",
+        "last_setup_crc32" : "",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

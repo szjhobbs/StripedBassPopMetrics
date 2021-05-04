@@ -1,0 +1,24 @@
+---
+
+---
+
+<!-- data customers -->
+
+```{r setup8, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Primary Users
+
+Mostly, we are the primary users. Over the last decade, a few entities have requested data subsets but none have done so at regular intervals (e.g., annually). We supply (or should supply) annual estimates of harvest rate, survival rate, abundance (absolute & relative), and harvest. Alas, we have fallen short in our timeliness of calculating such metrics.
+
+<more here, other users?>
+
+## Customer (User) Needs
+
+Loboschefsky et al. (citation) used abundance estimates to develop a bioenergetics model.
+
+<!-- Pascale Goertler migration study -->
+

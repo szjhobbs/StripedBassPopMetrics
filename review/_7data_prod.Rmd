@@ -1,0 +1,62 @@
+---
+
+---
+
+<!-- data products -->
+
+```{r setup7, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Data Storage
+
+Data are stored in a Tier 3 level server-based database (MS SQL Server; database name: `BDASB`). Data are accessed via two applications: `Managed Access Login` or `ASB_Queries.accdb`. These applications are accessible only on CDFW-Stockton based computers. Data backup is handled via methods established by the database administrator (of CDFW's Data Technology Division).
+
+## Data Collection & Data Management
+
+Field data are recorded on one of six datasheets: (1) daily summary; (2) recaptures; (3) by-catch; (4) salmonids; (5) creel (as needed); and (6) effort. At the end of each sampling day, a crew member reviews each datasheet for completeness and accuracy. Field crew return all datasheets to CDFW's Stockton Office, where an Environmental Scientist reviews for completeness and accuracy, editing as needed.
+
+New data are entered via `Managed Access Login`, and quality assurance is enforced through line-by-line inspection of data printouts (i.e., hardcopies). We then randomly select 10% of data for a final line-by-line review.
+
+<TODO: Data Management Plan can be included if it exists>
+
+## Data Analysis
+
+Currently, we use R & RStudio for all data analytics [`r version[["version.string"]]` -@baseR-2019; RStudio version 1.2.5033 -@rstudio-2019]. Data are queried through open database connectivity established with the server-based `BDASB`. We use SQL (structured query language) to extract desired data, and then save such extracts as `.rds` files for use in R & RStudio. We update each `.rds` file when appropriate (i.e., with new data).
+
+*Note*: we completed and compiled this report using R packages `sportfish` -@sportfish-2018 and `knitr` -@knitr-2020. File organization and R code can be found [here](https://github.com/jasondubois/StripedBassPopMetrics/tree/master/review). Find appropriate `.Rmd` (Rmarkdown) file.
+
+#### Population Metrics
+
+Detailing the steps and methods that produce various population metrics is beyond the scope of this report. Three such metrics are abundance, harvest rate, and survival rate, for which the algorithms can be found in Ricker -@ricker-1975, see equations 3.9, 3.1, & 5.1.
+
+Estimating abundance is a multi-step process that includes age and sex stratification. Because estimating abundance requires the number of recaptured marks (tags), it takes four years (i.e., seasons) before we consider estimates final. Estimating harvest rate includes adjusting for non-response all angler tag returns not collected during creel census operations (e.g., returned via mail). Ricker's -@ricker-1975 survival rate algorithm (5.1) requires two consecutive sampling seasons.
+
+We calculate tagging catch-per-unit effort (CPUE) as a measure of relative abundance. Further, we can measure migration on a crude scale (i.e., tagging location versus recapture location). We can estimate annual growth rate given available length-at-age data.
+
+## Data Dissemination
+
+Raw data are available upon request. We can provide a standalone copy of `BDASB` with necessary queries. As needed or requested, we can provide data extracts in spreadsheet format (e.g., `.xlsx` or `.csv` files).
+
+## Manuscripts | Newsletters | Memos | Reports
+
+We have published --- though nothing in 10+ years --- in peer-reviewed journals (e.g., *California Fish & Game*; *Transactions of the American Fisheries Society*). Recent publications include IEP Newsletters and field season summary reports (from 2008 onward). Further, we have written memorandums as summaries of brief analytics or special projects.
+
+We make most of these documents available through our bibliography page accessed at the link below. New documents are added or old documents are updated internally through the Department's Document Library.
+
+<!-- presentations ? -->
+
+https://wildlife.ca.gov/Conservation/Delta/Striped-Bass-Study/Bibliography
+
+## Current Deliverables
+
+For 2019, we completed the following deliverables:
+
+(1) applied individually-numbered disc tags to Striped Bass (May-Jun)
+(2) reported on 2019 fieldwork (Jan 2020)
+(3) corresponded with angers who reported catching disc tagged Striped Bass (ongoing)
+(4) managed associated databases (ongoing)
+
+<!-- For some time now, we have not produced at regular intervals some important population metrics (e.g., absolute abundance; harvest rate; survival rate). We provide within this report recommendations for updating such metrics in a timelier manner (<see section ??>). -->

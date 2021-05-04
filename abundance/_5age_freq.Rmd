@@ -1,0 +1,365 @@
+---
+
+---
+
+<!-- 
+to get some sense of age-at-length or age frequency annually by sex?
+-->
+
+### Age Frequency
+
+This is a quick exercise to view annual age frequency by sex, and to get some sense of length-at-age. This is by no means an extensive look into growth and (or) changes over time in length or age or growth.
+
+Simply, we add `AgeFreq` to our `catch` dataframe. By sex, we pass the `Aged` field to `base::table()` for frequency by age.
+
+```{r age-freq}
+
+# to get overall age range so levels can be set accordingly in `AgeFreq` below
+rng_age <- vapply(catch[["AgeAssign"]], FUN = function(d) {
+  o <- vapply(d, FUN = function(s) {
+      range(s[["Aged"]], na.rm = TRUE)
+  }, FUN.VALUE = numeric(2L))
+  range(o)
+}, FUN.VALUE = numeric(2L))
+
+catch$AgeFreq <- lapply(catch[["AgeAssign"]], FUN = function(d) {
+  
+  # for looping through male & female lists
+  sex <- c(m = 'm', f = 'f')
+  
+  # so table is consistently same size for use in vapply
+  lvls <- Reduce(f = `:`, x = range(rng_age))
+  n <- length(lvls)
+  
+  # for age frequency table by sex
+  vapply(sex, FUN = function(s) {
+    table(factor(d[[s]][["Aged"]], levels = lvls))
+  }, FUN.VALUE = numeric(length = n))
+  # end inner vapply
+})
+# end outer lapply
+
+# clean up
+# rm(rng_age)
+
+```
+
+```{r af-max}
+
+# Reduce(f = max, x = catch[["AgeFreq"]])
+
+colMax <- function(x, dim = 2) apply(x, MARGIN = dim, FUN = max)
+
+maxf <- colMax(
+  vapply(catch[["AgeFreq"]], FUN = colMax, FUN.VALUE = numeric(2L)),
+  dim = 1
+)
+
+# clean up
+rm(colMax)
+
+# for narrative below
+maxf_narr <- paste(names(maxf), maxf, sep = ":", collapse = " | ")
+
+```
+
+Here, we explore changes in age distribution for each sampling (tagging) year. We color coded according to maximum frequency by sex (`r maxf_narr`).
+
+```{r plot-tile-age-freq}
+
+p_age_freq <- substitute(
+  expr = Plot(x = x, y = y, adjUsr = 0.25),
+  env = list(x = catch[["RelYear"]], y = rng_age)
+)
+
+age_freq_tiles <- lapply(c(m = 'm', f = 'f'), FUN = function(s) {
+  
+  # for color bar & main figure
+  lo <- layout(mat = 2:1, heights = c(0.15, 0.85))
+  par(mar = c(0.5, 0.5, 0.5, 0.5), oma = c(2.5, 2.5, 0.5, 0.5))
+  
+  # to create empty plot
+  p <- eval(p_age_freq)
+  
+  # still not sure about using grid for this figure
+  # p$grid(xRng = TRUE)
+  
+  # to cycle through age frequencies for each release year
+  o <- Map(f = function(x, af) {
+    
+    # get age frequency for specified sex
+    d <- af[, s]
+    a <- as.numeric(names(d))
+    
+    # change to between years (#1) or within year (#2)
+    alpha <- sqrt(d / maxf[s]) #1
+    # alpha <- sqrt(prop.table(d)) #2
+    # alpha <- sqrt(d / sum(d)) #2
+    
+    # for heat map or tile plot
+    col_tile <- rgb(
+      red = 0.27, 
+      green = 0.50, 
+      blue = 0.70,
+      alpha = alpha
+    )
+    
+    # to set 0 to obvious color
+    col_tile[d == 0] <- "grey60"
+    
+    # for adjusting size of tile in rect()
+    adj <- 0.5
+    
+    # create tiles for each year & age
+    rect(
+      xleft = x - adj, 
+      ybottom = a - adj,
+      xright = x + adj, 
+      ytop = a + adj,
+      col = col_tile, 
+      border = NA
+    )
+    
+    # output for now but not sure this is needed
+    data.frame(D = d, Clr = col_tile, stringsAsFactors = FALSE)
+    
+  }, x = catch[["RelYear"]], af = catch[["AgeFreq"]])
+  # end Map
+  
+  # axis tick labeling & axis labels
+  Axis(p, side = 1, labelAdj = 0.3)
+  Axis(p, side = 2, labelAdj = 0.3)
+  mtext(text = "Year", side = 1, line = 1.2)
+  mtext(text = "Age", side = 2, line = 1.3)
+  
+  # to identify sex & max value used for color bar
+  mtext(
+    text = paste(
+      c(m = "\u2642", f = "\u2640")[s],
+      paste0("max=", maxf[s]),
+      sep = " | "
+    ),
+    side = 3,
+    line = 0.25,
+    adj = 0.95,
+    col = "grey50",
+    cex = 1.0,
+    font = 1
+  )
+  
+  # for ease of using to create color bar
+  o <- do.call(what = rbind, args = o)
+  
+  par(mar = c(1, 1.5, 1, 0.5))
+  
+  # create color bar plot here *************************************************
+  p_cb <- Plot(
+    x = o[["D"]],
+    y = c(0.99, 1.01), 
+    x0 = TRUE,
+    adjUsr = 1
+  )
+  
+  # to establish x values where alpha = sqrt(xs / maxf[s])
+  # n <- length(p_cb$data()[["x"]]) * 1L
+  n <- 100L
+  xs <- seq(
+    # from = p_cb[["xrng"]][[1]],
+    from = 0,
+    to = p_cb[["xrng"]][[2]], 
+    length.out = n
+  )
+  
+  # for height of color bar within plot
+  ys <- p_cb[["yrng"]] #+ c(0.008, -0.008)
+  
+  # not crazy about the extra code here to create the color bar but for now it
+  # will suffice; would like to use data in `o` to reduce some of the redundancy
+  
+  col_tile <- rgb(
+    red = 0.27, 
+    green = 0.50, 
+    blue = 0.70,
+    alpha = sqrt(xs / maxf[s])
+  )
+  
+  col_tile[xs == 0] <- "grey60"
+  
+  rect(
+    xleft = xs[-n],
+    ybottom = ys[[1]],
+    xright = xs[-1],
+    ytop = ys[[2]], 
+    col = col_tile, 
+    border = NA
+  )
+  
+  # to label tick marks with frequency intervals
+  Axis(p_cb, side = 3, labelAdj = 0.2, cexAxis = 0.75)
+  mtext(
+    text = "age frequency color bar",
+    side = 1, 
+    line = -0.2, 
+    cex = 0.75, 
+    col = "grey50", 
+    font = 3
+  )
+  # end color bar **************************************************************
+  
+  # no output for now
+  invisible()
+  
+})
+# end lapply
+
+# clean up
+rm(age_freq_tiles)
+
+```
+
+### Length-at-Age
+
+```{r age-at-length}
+
+catch$AgeLenRange <- t(vapply(catch[["AgeAssign"]], FUN = function(d) {
+  
+  ra <- NULL
+  rl <- NULL
+  
+  o <- lapply(d, FUN = function(s) {
+    fl <- Filter(f = function(ll) ll >= 22, x = s[["RelFL"]])
+    a <- range(s[["Aged"]], na.rm = TRUE)
+    l <- range(fl, na.rm = TRUE)
+    ra <<- range(ra, a)
+    rl <<- range(rl, l)
+  })
+  # end lapply
+  
+  c(Age = ra, Len = rl)
+  
+}, FUN.VALUE = numeric(4L)))
+
+# range(catch[["AgeLenRange"]][, c("Age1", "Age2")])
+rng_age_all <- range(rng_age)
+rng_len_all <- range(catch[["AgeLenRange"]][, c("Len1", "Len2")])
+
+```
+
+For plotting purpose, we retrieved the age range and the length range for the entire dataset (age: `r paste0(rng_age_all, collapse = "-")`; length `r paste0(rng_len_all, collapse = "-")`). Below are length-at-age plots for each tagging year (labeled in the bottom right of each plot). We supply loess lines for male (faded blue) and female (faded red), but such application issued warnings not yet investigated. So, consider that when viewing each plot. 
+
+```{r plot-len-at-age, fig.height=16, fig.asp=2, warning=FALSE}
+
+# for outside margins mostly for space on x- & y-axes to allow for tick labels &
+# axis labels
+par(oma = c(3, 3, 0.5, 0.5))
+
+# ********************************************************************
+# for plotting all years in grid-like fashion ************************
+
+# to get number of plots (i.e., one plot per year)
+nplots <- seq_len(length.out = nrow(catch))
+# our desired number of columns for plot matrix
+ncols <- 5
+nrows <- ceiling(length(nplots) / ncols)
+lomatrix <- substitute(
+  expr = matrix(data = d, ncol = nc, nrow = nr, byrow = TRUE),
+  env = list(d = nplots, nc = ncols, nr = nrows)
+)
+
+lo <- layout(mat = eval(expr = lomatrix))
+# layout.show(n = lo)
+# ********************************************************************
+
+par(mar = c(0.25, 0.25, 0.25, 0.25))
+
+plot_len_age <- Map(f = function(y, d) {
+  
+  p <- Plot(x = rng_age_all, y = rng_len_all)
+  
+  p$grid()
+  
+  # not crazy about the color scheme but will keep it for now
+  cl <- c(
+    m = rgb(red = 39/255, green = 8/255, blue = 243/255, alpha = 0.2),
+    f = rgb(red = 243/255, green = 8/255, blue = 173/255, alpha = 0.2)
+  )
+  
+  # attempts below at different colors & points
+  # cl <- c(
+  #   m = grey(level = 0.6, alpha = 0.1),
+  #   f = grey(level = 0.6, alpha = 0.09)
+  # )
+  # 
+  # cl <- c(
+  #   m = adjustcolor(col = "steelblue", alpha.f = 0.1),
+  #   f = adjustcolor(col = "grey25", alpha.f = 0.1)
+  # )
+  
+  # pt <- c(m = "\u2642", f = "\u2640")
+  # pt <- c(m = 1, f = 4)
+  
+  # to cycle through by sex & then plot length-at-age
+  Map(f = function(nms, s) {
+    
+    # because some fish are 0 or single digits (errors that need to be cleaned)
+    b <-  s[["RelFL"]] >= 22
+    
+    # to add length at age with some noise in x-axis to mitigate overplotting
+    points(
+      x = jitter(s[b, "Aged"], factor = 0.5),
+      y = s[b, "RelFL"],
+      col = grey(level = 0.75, alpha = 0.5),
+      # col = rgb(red = 0, green = 0, blue = 0, alpha = 0.05),
+      pch = 1,
+      cex = 0.75
+    )
+    
+    # gives many warnings and have not investigated
+    lines(
+      loess.smooth(
+        x = s[b, "Aged"],
+        y = s[b, "RelFL"]
+      ), 
+      type = "l",
+      col = cl[nms],
+      lwd = 2
+    )
+    
+  }, names(d), d)
+  # end Map
+  
+  # for placing year in bottom right of plot where probability of data begin
+  # present there is nill
+  text(
+    x = p[["xrng"]][[2]],
+    y = p[["yrng"]][[1]], 
+    labels = y, 
+    cex = 0.9, 
+    font = 3, 
+    adj = c(1, 0),
+    col = "grey30"
+  )
+  
+  # not crazy about this but for now it correctly places x- & y-axes tick
+  # labels; tried using modulo but to no avail due to missing years
+  if (y %in% c(1969, 1974, 1979, 1984, 1989, 1994, 2003, 2009, 2015)) 
+    Axis(p, side = 2, labelAdj = 0.3, cexAxis = 1)
+  
+  if (y %in% 2015:2019) 
+    Axis(p, side = 1, labelAdj = 0.3, cexAxis = 1)
+  
+  # no output for now
+  invisible(NULL)
+  
+}, catch[["RelYear"]], catch[["AgeAssign"]])
+# end outer Map
+
+# return layout to single plot & then label axes accordingly
+layout(mat = 1)
+mtext(text = "Age", side = 1, line = 1.9)
+mtext(text = "Fork length (cm)", side = 2, line = 2.25)
+
+# clean up
+rm(nplots, ncols, nrows, lomatrix, lo, plot_len_age)
+
+```

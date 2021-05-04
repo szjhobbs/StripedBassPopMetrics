@@ -1,0 +1,163 @@
+---
+title: ""
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+# knitr::opts_chunk$set(rows.print = 5)
+
+```
+
+```{r load-libs, warning=FALSE, message=FALSE}
+
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r load-data}
+
+StriperAll <- readRDS("data/tagging/StriperAll.rds")
+
+# subset for this analysis
+fykes <- subset(StriperAll, subset = Method %in% "FT" & RelYear > 2003)
+
+```
+
+We did not tag in 2006 and 2014. Prior to 2011 data on non-tagged fish (e.g., over; dead) exists only in hard-copy.
+
+TagAction  
+1. Tagged  
+2. Recaptured  
+4. Sub-legal (not tagged)  
+5. Over (no info recorded)  
+6. Dead/floater  
+7. "Creeled"  
+
+Below is annual count of fish (from fykes) by tagging action.
+
+```{r tag-action}
+
+with(data = fykes, expr = {
+  
+  table(RelYear, TagAction, useNA = "ifany")
+  
+})
+
+```
+
+Below --- date range per week by year
+
+```{r date-range_wk, rows.print=12}
+
+fykes$Week <- as.numeric(format(fykes[["RelDate"]], "%U"))
+
+
+date_range_week <- with(data = fykes, expr = {
+  
+  # tapply(RelDate, INDEX = list(RelYear, Week), FUN = range, simplify = FALSE)
+  
+  dates <- split(RelDate, f = list(RelYear, Week))
+  
+  rng <- lapply(dates, FUN = function(d) {
+
+    if (length(d) == 0)
+      c(NA, NA)
+    else
+      format(range(d), "%m-%d")
+
+  })
+  
+  yr_wk <- strsplit(names(dates), split = "\\.")
+  
+  out <- data.frame(
+    do.call(rbind, yr_wk),
+    do.call(rbind, rng),
+    stringsAsFactors = FALSE
+  )
+  
+  colnames(out) <- c("Year", "Week", "Begin", "End")
+  
+  rownames(out) <- NULL
+  
+  out
+  
+  
+})
+
+# knitr::kable(date_range_week, format = "pandoc")
+
+date_range_week
+
+```
+
+Below --- annual mean daily catch (point) with min & max (vertical lines) by week
+
+```{r daily-count}
+
+# with(data = fykes, expr = {
+#   
+#   as.Date(tapply(as.Date(RelDate), list(RelYear, Week), max), origin = "1970-01-01")
+#   
+# })
+
+
+daily_count <- aggregate(formula = Count ~ RelDate, data = fykes, FUN = sum)
+
+daily_count$Week <- as.numeric(format(daily_count[["RelDate"]], "%U"))
+daily_count$Year <- as.numeric(format(daily_count[["RelDate"]], "%Y"))
+
+write.csv(daily_count, file = "check.csv")
+
+
+# daily_sum <- daily_count %>% 
+#   group_by(Year, Week) %>% 
+#   summarise(
+#     Days = length(RelDate),
+#     Mean = mean(Count),
+#     Min = min(Count),
+#     Max = max(Count)
+#   )
+# 
+# filter(daily_sum, Week == 19)
+# 
+# 
+# ggplot(data = daily_sum, mapping = aes(x = Week, y = Mean)) +
+#   geom_point()
+# 
+# ggplot(data = daily_count, mapping = aes(x = factor(Week), y = Count)) +
+#   stat_summary(fun.y = mean, fun.ymax = max, fun.ymin = min) +
+#   facet_wrap(facets = ~Year, ncol = 3, scales = "free_y")
+
+
+ggplot(data = daily_count, mapping = aes(x = Year, y = Count)) +
+  stat_summary(fun.y = mean, fun.ymax = max, fun.ymin = min, size = 0.15) +
+  facet_wrap(facets = ~Week, ncol = 3) #, scales = "free_y"
+
+
+
+
+```
+
+```{r}
+
+fykes %>% 
+  group_by(RelYear) %>% 
+  summarise(
+    NumDays = length(unique(RelDate)),
+    SeasonBegin = format(min(RelDate), "%m-%d"),
+    SeasonEnd = format(max(RelDate), "%m-%d")
+  )
+
+
+
+```
+
+
+

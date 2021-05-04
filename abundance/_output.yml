@@ -1,0 +1,3 @@
+github_document:
+     pandoc_args: --webtex
+word_document: default

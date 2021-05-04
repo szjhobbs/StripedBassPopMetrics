@@ -1,0 +1,5 @@
+"0",""
+"0","# points(p_cc_cpue, cex = cc_cpue$Avg * 1.0, col = as.factor(cc_cpue$Type), pch = as.numeric(as.factor(cc_cpue$Type)))"
+"0",""
+"0","points(p_cc_cpue, cex = cc_cpue[[""Avg""]])"
+"0",""

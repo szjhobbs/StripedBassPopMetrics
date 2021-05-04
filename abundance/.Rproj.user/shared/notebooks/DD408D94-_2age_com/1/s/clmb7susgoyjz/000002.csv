@@ -1,0 +1,7 @@
+"0",""
+"0","# possible plot"
+"0",""
+"0","plot("
+"0","  creel$CYear,"
+"0","  creel$DailyGrowth[, ""Rate""]"
+"0",")"

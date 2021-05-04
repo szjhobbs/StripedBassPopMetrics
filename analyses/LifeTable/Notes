@@ -1,0 +1,42 @@
+
+May 2017
+
+22 -->
+created LifeTable directory - idea is to begin process of modeling "what sort of mortality on certain demographics could explain the striped bass sex-ratio skew we see" (per Marty e-mail 16-May-2017)
+
+herein I'll compile the necessary data & code to create such a model
+
+June 2017
+
+06 -->
+
+(1) mortality from age-freq (catch curves) by sex; can get mortality for age intervals 3-4, 4-5, 5-6, etc.
+(2) then can set up current life table based on starting of 100K or other
+
+20 -->
+
+(1) developed LifeTable() function based on table in http://www.tiem.utk.edu/~gross/bioed/bealsmodules/lifetables.html. As best I understand, this is a cohort life table. Will attempt to develop time-specific life table.
+
+(2) must think about how to apply life tables not just by release year but by sex as well
+
+26 -->
+
+(1) completed (for the time being) the needed functions to create life tables (see file functions_life-table.R)
+(2) will now create report (RMarkdown) for displaying some of the data (at least as a first-take)
+(3) at some point if necessary StaticFrequency & CohortFrequency can be combined as one function
+
+29 -->
+
+TODO:
+(1)	continue with application of life table for other years
+(2)	create survivorship curve (lx ~ age) and compare male & female plots
+(3)	research mathematical models to perhaps create a life table (or components thereof) when age data are limited or to be used in place of life tables; briefly I read such models do exist (and — I think — this will bring us closer to the original directive of this project)
+(4)	age ‘un-aged’ years (2010+) using age-length key or von Bertalanffy growth model, then create life tables for said years
+(5)	Develop plot for annual fraction of females by week for each method. Might see pattern there...
+
+July 2017
+
+06 -->
+
+At the moment, left off in TestHazardFunction.R to turn to mark-recapture modeling. Current thinking is to find a model to 'correct' for missing data in life table or data (like count) that does not decrease with age (e.g., age 5 has 50 fish and age 6 has 60 fish). Potentially, at glm fit with 'poisson' might do the trick. I am looking for a model that will be simple to apply & will 'smooth' the data to avoid the aforementioned example. Might try to find a model to smooth lx, but this could be a bit more challenging, as it's dealing with proportions.
+

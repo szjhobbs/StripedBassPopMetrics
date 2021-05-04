@@ -1,0 +1,11 @@
+"0",""
+"0","# for splitting evenly per tagging year"
+"0","Tagging$StripedBass$RelSex <- factor("
+"0","  Tagging[[""StripedBass""]][[""RelSex""]],"
+"0","  levels = c(1, 2, NA),"
+"0","  labels = c('m', 'f', 'u'),"
+"0","# note: data entry some RelSex entered as `4` so here still NA need to change in"
+"2","Error: unexpected numeric constant in:
+""
+# note: data entry some RelSex entered as `4""
+"

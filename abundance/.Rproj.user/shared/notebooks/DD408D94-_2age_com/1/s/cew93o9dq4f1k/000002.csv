@@ -1,0 +1,6 @@
+"0",""
+"0","creel <- Split(data = Tagging[[""CCAge""]], splitVars = CYear)"
+"0",""
+"0","# desired data type"
+"0","creel$CYear <- as.numeric(creel[[""CYear""]])"
+"0",""

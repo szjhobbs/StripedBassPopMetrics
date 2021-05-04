@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1599004021523.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2392304837",
+    "id" : "91827EE8",
+    "lastKnownWriteTime" : 1594760953,
+    "last_content_update" : 1614988692739,
+    "path" : "C:/Users/JaHobbs/OneDrive - California Department of Fish and Wildlife/SportFish/0_RProjects/StripedBassPopMetrics/abundance/_5age_freq.Rmd",
+    "project_path" : "_5age_freq.Rmd",
+    "properties" : {
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

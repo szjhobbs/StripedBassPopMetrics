@@ -1,0 +1,6 @@
+"0",""
+"0","p_abund <- Plot("
+"0","  x = catch[[""RelYear""]],"
+"0","  y = catch[[""AbunLowUpBounds""]], "
+"0","  subset = catch[[""RelYear""]] > 2009"
+"0",")"

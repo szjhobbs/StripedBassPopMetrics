@@ -1,0 +1,8 @@
+"0",""
+"0","# creates a quasi age-length key for mostly aging years in which no scales have"
+"0","# been aged directly; will be used in following chunks"
+"0","qalk <- with(data = Tagging[[""StripedBass""]], expr = {"
+"0","  b <- (RelFL >= 30 & !is.na(RelFL)) & !is.na(RelAge)"
+"0","  split(RelAge[b], f = RelFL[b])"
+"0","})"
+"0",""

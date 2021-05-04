@@ -1,0 +1,304 @@
+---
+
+---
+
+<!--
+TODO (08-Oct-2019):
+(1) Write queries especially for this QAQC .Rmd. That way this file becomes     standalone irrespective of the data/.rds files
+
+(2) Incorporate some of DataEntryQAQC-StrBass.Rmd herein
+-->
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+now <- Sys.Date()
+
+```
+
+## Introduction
+
+
+
+## Libraries
+
+We load the `sportfish` package, currently available on GitHub. For now (`r now`), this is the only package required.
+
+```{r load-libraries}
+
+library(sportfish)
+# library(package)
+
+```
+
+## Load Data
+
+We load `StripedBass.rds` file from directory `data/tagging`. We only need this file for analytics for now (`r now`).
+
+```{r load-data}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+Tagging <- new.env()
+ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+# clean up
+rm(data_dir)
+
+```
+
+Here we create some variables we'll use throughout this process. We create them here and now for convenience.
+
+```{r variables}
+
+year <- 2019
+
+# age_len_vars <- with(data = Stripers, expr = {
+#   
+#   # bfl <- RelFL %in% 0:9
+#   # bage <- RelAge %in% 0:1
+#   
+#   flNA <- sum(is.na(RelFL))
+#   ageNA <- sum(is.na(RelAge))
+#   
+#   fl_rng <- range(RelFL[!RelFLFlag], na.rm = TRUE)
+#   age_rng <- range(RelAge, na.rm = TRUE)
+#   
+#   list(
+#     FishCount = sum(Count),
+#     FLRemove = sum(RelFLFlag),
+#     # AgeRemove = sum(bage),
+#     CountFLNA = sum(flNA),
+#     CountAgeNA = sum(ageNA),
+#     RangeFL = fl_rng,
+#     RangeAge = age_rng,
+#     RangeFLtxt = paste0(fl_rng, collapse = " to "),
+#     RangeAgetxt = paste0(age_rng, collapse = " to ")
+#   )
+# })
+
+```
+
+## Effort
+
+```{r effort}
+
+with(data = Tagging[["Effort"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  cm <- factor(
+    CapMethod[b],
+    levels = c(1, 2),
+    labels = c(`1` = "GN", `2` = "FT"),
+    exclude = NA
+  )
+  
+  # to check that release date is same as date in end time (or when trap was
+  # checked); will not be equal when release date recorded but end time not
+  # recorded due to oversight or if traps checked (quickly) but not tended (see
+  # 2019 May 15 for an example)
+  check_date <- Map(f = identical, as.Date(RelDate[b]), as.Date(EndTime[b]))
+  
+  check_date <- unlist(check_date, use.names = FALSE)
+  
+  check_date <- if (all(check_date)) {
+    "all equal"
+  } else {
+    list(
+      NumDatesNotEqual = sum(!check_date),
+      DatesNotEqual = RelDate[b][which(!check_date)]
+    )
+  }
+  
+  time_diff <- difftime(time1 = EndTime[b], time2 = StartTime[b])
+  
+  plot(x = RelDate[b], y = time_diff)
+  # mtext(text = range(time_diff), side = 3, line = 0)
+  
+  list(
+    Methods = summary(cm),
+    Traps = table(DriftTrap[b], dnn = list("TrapNums")),
+    TimeRange = range(time_diff, na.rm = TRUE),
+    DateRange = range(RelDate[b]),
+    NumDays = length(unique(RelDate[b])),
+    RelDateCheck = check_date
+  )
+  
+})
+
+```
+
+## Tagging
+
+```{r tagging}
+
+with(data = Tagging[["StripedBass"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  # capture method & location
+  meth_loc <- table(
+    CapMethod[b], RelLoc[b],
+    useNA = "ifany",
+    dnn = list("CapMeth", "Loc")
+  )
+  
+  # sex & condition
+  sex_cond <- table(
+    RelSex[b], RelCond[b],
+    useNA = "ifany",
+    dnn = list("Sex", "Condition")
+  )
+  
+  # tagging action
+  ta_lbls <- paste(
+    c("Disc", "Recp", "RecN", "SbLg", "Over", "Dead", "Crld"),
+    1:7,
+    sep = "_"
+  )
+
+  tag_action <- factor(
+    TagAction[b],
+    levels = 1:7,
+    labels = ta_lbls,
+    exclude = NA
+  )
+  
+  # tag_action_sum <- aggregate(
+  #   Count[b],
+  #   by = list(tag_action),
+  #   FUN = sum,
+  #   drop = FALSE
+  # )
+  # 
+  # colnames(tag_action_sum) <- c("TagAction", "Total")
+  
+  tag_action_sum <- tapply(
+    Count[b], INDEX = list(tag_action), FUN = sum
+  )
+  
+  # count of traps or drifts
+  drift_trap <- table(DriftTrap[b])
+  
+  # output
+  list(
+    RecordCount = sum(b),
+    Days = length(unique(RelDate[b])),
+    RangeDate = range(RelDate[b]),
+    RangeFL = range(RelFL[b], na.rm = TRUE),
+    NumFLNA = sum(is.na(RelFL[b])),
+    CountTrap = drift_trap,
+    MethodLoc = meth_loc,
+    SexCond = sex_cond,
+    TagActionSum = tag_action_sum
+  )
+})
+
+```
+
+
+#### Tags
+
+```{r tags}
+
+with(data = Tagging[["StripedBass"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  l <- strsplit(TagNum[b], split = "\\d{1,}")
+  
+  val <- vapply(l, FUN = function(x) {
+    if (length(x) == 0) return("None")
+    if (x == "") return("NR")
+    x
+  }, FUN.VALUE = character(1L))
+  
+  list(
+    TagPrefix = table(val, TagValue[b], useNA = "ifany"),
+    AllTags6Dig = table(nchar(TagNum[b]), useNA = "ifany")
+  )
+  
+})
+
+```
+
+## Environmental Data
+
+```{r environmental}
+
+with(data = Tagging[["Environmentals"]], expr = {
+  
+  y <- as.numeric(format(RelDate, format = "%Y"))
+  
+  b <- y %in% year
+  
+  list(
+    RecordCount = sum(b),
+    RangeDate = range(RelDate[b]),
+    NumDays = length(unique(RelDate[b])),
+    MethLoc = table(
+      CapMethod[b],
+      Location[b],
+      useNA = "ifany",
+      dnn = list("CapMeth", "Loc")
+    ),
+    RangeWaterTemp = range(WaterTemp[b], na.rm = TRUE),
+    NumWaterTempNA = sum(is.na(WaterTemp[b]))
+  )
+})
+
+```
+
+## ByCatch
+
+```{r}
+
+with(data = Tagging[["ByCatch"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  fish <- tapply(Count[b], INDEX = list(SpeciesCode[b]), FUN = sum)
+  fishL <- tapply(FL[b], INDEX = list(SpeciesCode[b]), FUN = function(x) {
+    if (all(is.na(x))) return(NULL)
+    out <- range(x, na.rm = TRUE)
+    names(out) <- c("Min", "Max")
+    out
+  })
+  
+  fishL <- do.call(what = rbind, args = fishL)
+  
+  b_chinook <- b & SpeciesCode %in% "KS"
+  
+  list(
+    RecordCount = sum(b),
+    RangeDate = range(RelDate[b]),
+    NumDays = length(unique(RelDate[b])),
+    MethLoc = table(
+      CapMethod[b],
+      Location[b],
+      useNA = "ifany",
+      dnn = list("CapMeth", "Loc")
+    ),
+    DriftTrap = table(DriftTrap[b], useNA = "ifany"),
+    Fish = fish,
+    FishLen = fishL,
+    KSData = table(
+      Condition[b_chinook],
+      Coloration[b_chinook],
+      HasAdFin[b_chinook],
+      useNA = "ifany"
+    )
+  )
+  
+})
+
+```
+
+---
+
+CDFW, SportFish Unit   
+Striped Bass Tagging Data QAQC  
+`r Sys.Date()`

@@ -1,0 +1,63 @@
+---
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+# sets all sql chunks to same database connection
+knitr::opts_chunk$set(connection = "con")
+
+```
+
+```{r libraries}
+
+# library(odbc)
+
+```
+
+```{r db-connect}
+
+# drvr <- ""
+srvr <- "sqlprod2.ad.dfg.ca.gov"
+dbn <- ""
+
+con <- DBI::dbConnect(
+  odbc::odbc(), 
+  Driver = "SQL Server", 
+  Server = srvr, 
+  Database = dbn, 
+  Trusted_Connection = "True"
+)
+
+```
+
+<!-- begin SQL queries -->
+
+```{sql, output.var=""}
+
+SELECT * FROM ;
+
+```
+
+<!-- end SQL queries -->
+
+```{r close-con}
+
+# close database connection
+odbc::dbDisconnect(conn = con)
+rm(con)
+
+```
+
+```{r log-extract}
+
+write(
+  sprintf("data extracted & cleaned: %s \nfrom %s", Sys.time(), dbn),
+  file = file.path(dr, "data-log"),
+  append = FALSE
+)
+
+```
+

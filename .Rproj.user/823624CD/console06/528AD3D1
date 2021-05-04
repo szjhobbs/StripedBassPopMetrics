@@ -1,0 +1,205 @@
+[?25l$ m[0K[?25hk[0K[6G[5G[?25l$ mkd[0K[?25hi[0Kr[0K[9G[?25l$ mkdir a[0K[?25hb[0K[?25lu[0K[11G[?25h[12G[?25l$ mkdir abun[0K[?25hd[0Ka[0Kn[0Kc[0Ke[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ m[0K[?25hd[0K[?25l$ m[0K[?25hk[0Kd[0Ki[0Kr[0K[9G[?25l$ mkdir d[0K[?25ha[0Kt[0Ka[0K,[0K[15G[?25l$ mkdir data, d[0K[15G[?25h[16G[?25l$ mkdir data, da[0K[?25ht[0Ka[0K-[0Ki[0Km[0Kp[0K[?25lo[0K[23G[?25h[24G[?25l$ mkdir data, data-impor[0K[?25ht[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ mkdir data, data-import[0K[?25h[?25l$ mkdir data, data-impor[0K[?25h[?25l$ mkdir data, data-impo[0K[25G[?25h[24G[?25l$ mkdir data, data-imp[0K[?25h[?25l$ mkdir data, data-im[0K[?25h[?25l$ mkdir data, data-i[0K[?25h[?25l$ mkdir data, data-[0K[21G[?25h[20G[?25l$ mkdir data, data[0K[?25h[?25l$ mkdir data, dat[0K[?25h[?25l$ mkdir data, da[0K[?25h[?25l$ mkdir data, d[0K[?25h[?25l$ mkdir data,[0K[15G[?25h[14G[?25l$ mkdir data[0K[?25h[?25l$ mkdir dat[0K[?25ha[0K[14G[?25l$ mkdir data s[0K[?25h[?25li[0K[15G[?25h[16G[?25l$ mkdir data s[0K[?25h[?25l$ mkdir data[0K[14G[?25h[?25l$ mkdir data f[0K[?25hi[0Ks[0Kh[0Ke[0Kr[0K[?25ly[0K[20G[?25h[21G[22G[?25l$ mkdir data fishery i[0K[?25hn[0Kd[0Ki[0Kc[0Ke[0Ks[0K[30G[?25l$ mkdir data fishery indices m[0K[?25ho[0Kr[0Kt[0Ka[0K[?25l$ mkdir data fishery indices mort[0K[35G[?25h[34G[?25l$ mkdir data fishery indices morta[0K[?25hl[0Ki[0Kt[0Ky[0K[40G[?25l$ mkdir data fishery indices mortality p[0K[?25hr[0Ke[0Ks[0Ke[0Kn[0Kt[0Ka[0Kt[0Ki[0Ko[0Kn[0Ks[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25h[?25l$[0K[3G[?25h[?25l$ e[0K[?25hc[0Kh[0Ko[0K[8G[?25l$ echo "[0K[?25hd[0Ka[0Kt[0Ka[0K[?25l$ echo "dat[0K[?25h[?25l$ echo "da[0K[?25h[?25l$ echo "d[0K[11G[?25h[10G[?25l$ echo "[0K[?25h[?25l$ echo[0K[8G[?25h[?25l$ echo d[0K[?25ha[0Kt[0Ka[0K-[0K[?25li[0K[13G[?25h[14G[?25l$ echo data-im[0K[?25ho[0Kp[0Ko[0Kr[0Kt[0K[21G[?25l$ echo data-imoport >[0K[?25h>[0K[24G[?25l$ echo data-imoport >> .[0K[?25hg[0Ki[0Kt[0Ki[0Kd[0K[?25l$ echo data-imoport >> .giti[0K[?25hg[0Kn[0Ko[0Kr[0Ke[0K[33G[32G[30G[28G[27G[26G[24G[22G[20G[18G[17G[15G[13G[11G[9G[7G[6G[5G[4G[3G[4G[5G[6G[7G[?25l$ echo  data-imoport >> .gitignore[0K[8G[?25h[?25l$ echo " data-imoport >> .gitignore[0K[9G[?25h[?25l$ echo "data-imoport >> .gitignore[0K[9G[?25h[10G[11G[12G[13G[14G[15G[16G[17G[18G[19G[20G[?25l$ echo "data-imopor"t >> .gitignore[0K[21G[?25h[?25l$ echo "data-imoport >> .gitignore[0K[20G[?25h[21G[?25l$ echo "data-imoport" >> .gitignore[0K[22G[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git a[0K[?25hd[0Kd[0K[11G[?25l$ git add .[0K[?25hg[0Ki[0Kt[0Ki[0Kd[0K[?25l$ git add .giti[0K[?25hg[0Kn[0K[?25lo[0K[18G[?25h[19G[?25l$ git add .gitignor[0K[19G[?25h[20G[?25l$ git add .gitignore[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25h"[0K[18G[?25l$ git commit -m "i"[0K[19G[?25h[?25l$ git commit -m "im"[0K[20G[?25h[?25l$ git commit -m "imp"[0K[21G[?25h[?25l$ git commit -m "impo"[0K[22G[?25h[?25l$ git commit -m "impor"[0K[23G[?25h[?25l$ git commit -m "import"[0K[24G[?25h[?25l$ git commit -m "import "[0K[?25h[25G[?25l$ git commit -m "import f"[0K[26G[?25h[?25l$ git commit -m "import fi"[0K[27G[?25h[?25l$ git commit -m "import fil"[0K[28G[?25h[?25l$ git commit -m "import file"[0K[29G[?25h[?25l$ git commit -m "import files"[0K[30G[?25h[?25l$ git commit -m "import files "[0K[31G[?25h[?25l$ git commit -m "import files n"[0K[32G[?25h[?25l$ git commit -m "import files no"[0K[33G[?25h[?25l$ git commit -m "import files not"[0K[34G[?25h[?25l$ git commit -m "import files not "[0K[35G[?25h[?25l$ git commit -m "import files not c"[0K[36G[?25h[?25l$ git commit -m "import files not co"[0K[37G[?25h[?25l$ git commit -m "import files not com"[0K[38G[?25h[?25l$ git commit -m "import files not comm"[0K[39G[?25h[?25l$ git commit -m "import files not commi"[0K[40G[?25h[?25l$ git commit -m "import files not commit"[0K[41G[?25h[?25l$ git commit -m "import files not commite"[0K[41G[?25h[42G[?25l$ git commit -m "import files not commited"[0K[43G[?25h[?25l
+[0K[?25h[master 8407980] import files not commited[0K[?25l
+ 1 file changed, 2 insertions(+)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git p[0K[?25h[?25lu[0K[8G[?25h[9G[?25l$ git pus[0K[?25hh[0K[12G[?25l$ git push o[0K[?25hr[0Ki[0Kg[0Ki[0Kn[0K[19G[?25l$ git push origin m[0K[?25ha[0Ks[0Kt[0Ke[0Kr[0K[?25l
+[0K[?25hEnumerating objects: 5, done.[0K[?25l
+C[0K[1G[?25hCounting objects: 100% (5/5), done.[0K[?25l
+Delta compression using up to 8 threads.[0K
+Compressing objects: 100% (3/3), done.[0K
+Writing objects:  66% (2/3)[0K[1G[?25hWriting objects: 100% (3/3), 381 bytes | 27.00 KiB/s, done.[0K[?25l
+Total 3 (delta 0), reused 0 (delta 0)[0K
+[0K[?25hTo https://github.com/jasondubois/StripedBassPopMetrics[0K[?25l
+   f209b52..8407980  master -> master[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[0m[0K]0;:/c/Users/jdubois/Documents/RProjects/StripedBassPopMetrics[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git a[0K[?25hd[0Kd[0K[11G[?25l$ git add d[0K[?25ha[0Kt[0Ka[0K/[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git s[0K[7G[?25h[8G[?25l$ git st[0K[?25ha[0Kt[0Ku[0Ks[0K[?25l
+[0K[?25hOn branch master[0K[?25l
+Your branch is up to date with 'origin/master'.[0K
+[0K
+Changes to be committed:[0K
+  (use "git reset HEAD <file>..." to unstage)[0K
+[0K
+        [0;32mnew file:   data/tagging/StripedBass.rds[0m[0K
+        [0;32mnew file:   data/tagging/data-log[0m[0K
+[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25hf[0Ki[0Kr[0Ks[0Kt[0K[24G[?25l$ git commit -m "first c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K"[0K[?25l
+[0K[?25h[master 1cdd594] first commit[0K[?25l
+ 2 files changed, 2 insertions(+)[0K
+ create mode 100644 data/tagging/StripedBass.rds[0K
+ create mode 100644 data/tagging/data-log[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ m[0K[?25hd[0Ki[0Kr[0K[?25l$ mdi[0K[?25h[?25l$ md[0K[?25h[?25l$ m[0K[?25hk[0Kd[0Ki[0Kr[0K[9G[?25l$ mkdir s[0K[?25hc[0Ka[0Kl[0Kr[0K[?25l$ mkdir scal[0K[?25he[0K-[0Ks[0Ka[0Km[0Kp[0Kl[0Ke[0Ks[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git a[0K[?25hd[0Kd[0K[11G[?25l$ git add s[0K[?25hc[0Ka[0Kl[0Ke[0K-[0Ks[0Ka[0Km[0Kp[0Kl[0Ke[0K[?25ls[0K[23G[?25h[24G[?25l$ git add scale-samples/[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git add scale-samples/[0K[?25h[?25l$ mkdir scale-samples[0K[?25h[?25l$ git commit -m "first commit"[0K[?25h[?25l
+[0K[?25h[master 5e04c8f] first commit[0K[?25l
+ 1 file changed, 76 insertions(+)[0K
+ create mode 100644 scale-samples/assessment.Rmd[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git commit -m "first commit"[0K[?25h[?25l$ git add scale-samples/[0K[?25ha[0Ks[0Ks[0Ke[0Ks[0Ks[0Km[0Ke[0Kn[0Kt[0K.[0KR[0Km[0Kd[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25h[?25l"[0K[18G[?25h[19G[18G[?25l$ git commit -m "f"[0K[19G[?25h[?25l$ git commit -m "fo"[0K[20G[?25h[?25l$ git commit -m "for"[0K[21G[?25h[?25l$ git commit -m "for "[0K[22G[?25h[?25l$ git commit -m "for s"[0K[23G[?25h[?25l$ git commit -m "for si"[0K[24G[?25h[?25l$ git commit -m "for sim"[0K[25G[?25h[?25l$ git commit -m "for simp"[0K[26G[?25h[?25l$ git commit -m "for simpl"[0K[27G[?25h[?25l$ git commit -m "for simpli"[0K[28G[?25h[?25l$ git commit -m "for simplic"[0K[29G[?25h[?25l$ git commit -m "for simplici"[0K[30G[?25h[?25l$ git commit -m "for simplicit"[0K[31G[?25h[?25l$ git commit -m "for simplicity"[0K[32G[?25h[?25l$ git commit -m "for simplicit"[0K[31G[?25h[?25l$ git commit -m "for simplici"[0K[30G[?25h[?25l$ git commit -m "for simplic"[0K[29G[?25h[?25l$ git commit -m "for simpli"[0K[28G[?25h[?25l$ git commit -m "for simpl"[0K[?25h[?25l$ git commit -m "for simp"[0K[?25h[26G[?25l$ git commit -m "for sim"[0K[25G[?25h[?25l$ git commit -m "for s"[0K[23G[?25h[?25l$ git commit -m "for "[0K[22G[?25h[?25l$ git commit -m "for"[0K[21G[?25h[?25l$ git commit -m "fo"[0K[20G[?25h[?25l$ git commit -m "f"[0K[19G[?25h[?25l$ git commit -m ""[0K[18G[?25h[?25l$ git commit -m"[0K[16G[?25h[?25l$ git commit -"[0K[15G[?25h[?25l$ git commit "[0K[14G[?25h[?25l$ git commit ""[0K[15G[?25h[?25l$ git commit "o"[0K[16G[?25h[?25l$ git commit "on"[0K[17G[?25h[?25l$ git commit "onl"[0K[18G[?25h[?25l$ git commit "only"[0K[19G[?25h[?25l$ git commit "only "[0K[19G[?25h[20G[?25l$ git commit "only n"[0K[21G[?25h[?25l$ git commit "only ne"[0K[22G[?25h[?25l$ git commit "only nee"[0K[23G[?25h[?25l$ git commit "only need"[0K[24G[?25h[?25l$ git commit "only needs"[0K[25G[?25h[?25l$ git commit "only needs "[0K[26G[?25h[?25l$ git commit "only needs t"[0K[27G[?25h[?25l$ git commit "only needs th"[0K[28G[?25h[?25l$ git commit "only needs thi"[0K[29G[?25h[?25l$ git commit "only needs this"[0K[30G[?25h[?25l$ git commit "only needs this "[0K[31G[?25h[?25l$ git commit "only needs this f"[0K[32G[?25h[?25l$ git commit "only needs this fi"[0K[32G[?25h[33G[?25l$ git commit "only needs this fil"[0K[34G[?25h[?25l$ git commit "only needs this file"[0K[35G[?25h[?25l
+[0K[?25herror: pathspec 'only needs this file' did not match any file(s) known to git.[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git commit "only needs this file"[0K[?25h[35G[34G[33G[30G[29G[28G[27G[25G[24G[23G[22G[21G[20G[19G[18G[17G[16G[15G[14G[?25l$ git commit -"only needs this file"[0K[15G[?25h[?25l$ git commit -m"only needs this file"[0K[16G[?25h[?25l$ git commit -m "only needs this file"[0K[17G[?25h[?25l
+[0K[?25h[master 632f9f7] only needs this file[0K[?25l
+ 1 file changed, 4 insertions(+), 2 deletions(-)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git commit -m "only needs this file"[0K[3G[?25h[39G[?25l$ git commit "only needs this file"[0K[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l$ git commit -m "only needs this file"[0K[?25h[38G[?25l$ git commit -m "only needs this fil"[0K[37G[?25h[?25l$ git commit -m "only needs this fi"[0K[36G[?25h[?25l$ git commit -m "only needs this f"[0K[35G[?25h[?25l$ git commit -m "only needs this "[0K[34G[?25h[?25l$ git commit -m "only needs this"[0K[33G[?25h[?25l$ git commit -m "only needs thi"[0K[32G[?25h[?25l$ git commit -m "only needs th"[0K[31G[?25h[?25l$ git commit -m "only needs "[0K[29G[?25h[?25l$ git commit -m "only needs"[0K[28G[?25h[?25l$ git commit -m "only need"[0K[?25h[?25l$ git commit -m "only ne"[0K[25G[?25h[?25l$ git commit -m "only n"[0K[24G[?25h[?25l$ git commit -m "only "[0K[23G[?25h[?25l$ git commit -m "only"[0K[22G[?25h[?25l$ git commit -m "onl"[0K[21G[?25h[?25l$ git commit -m "on"[0K[?25h[20G[?25l$ git commit -m "o"[0K[19G[?25h[?25l$ git commit -m ""[0K[18G[?25h[?25l$ git commit -m "i"[0K[19G[?25h[?25l$ git commit -m "in"[0K[20G[?25h[?25l$ git commit -m "in "[0K[21G[?25h[?25l$ git commit -m "in k"[0K[22G[?25h[?25l$ git commit -m "in ke"[0K[23G[?25h[?25l$ git commit -m "in kee"[0K[24G[?25h[?25l$ git commit -m "in keep"[0K[25G[?25h[?25l$ git commit -m "in keepi"[0K[26G[?25h[?25l$ git commit -m "in keepin"[0K[27G[?25h[?25l$ git commit -m "in keeping"[0K[28G[?25h[?25l$ git commit -m "in keeping "[0K[29G[?25h[?25l$ git commit -m "in keeping w"[0K[30G[?25h[?25l$ git commit -m "in keeping wi"[0K[31G[?25h[?25l$ git commit -m "in keeping wit"[0K[32G[?25h[?25l$ git commit -m "in keeping with"[0K[33G[?25h[?25l$ git commit -m "in keeping with "[0K[33G[?25h[34G[?25l$ git commit -m "in keeping with c"[0K[35G[?25h[?25l$ git commit -m "in keeping with co"[0K[36G[?25h[?25l$ git commit -m "in keeping with cod"[0K[37G[?25h[?25l$ git commit -m "in keeping with code"[0K[38G[?25h[?25l$ git commit -m "in keeping with code "[0K[39G[?25h[?25l$ git commit -m "in keeping with code c"[0K[40G[?25h[?25l$ git commit -m "in keeping with code ch"[0K[41G[?25h[?25l$ git commit -m "in keeping with code chu"[0K[42G[?25h[?25l$ git commit -m "in keeping with code chun"[0K[43G[?25h[?25l$ git commit -m "in keeping with code chunk"[0K[44G[?25h[?25l
+[0K[?25h[master 871a000] in keeping with code chunk[0K[?25l
+ 1 file changed, 2 insertions(+), 1 deletion(-)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git commit -m "in keeping with code chunk"[0K[3G[?25h[45G[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git d[0K[?25hi[0Kf[0Kf[0K[12G[?25l$ git diff H[0K[?25hE[0KA[0KD[0K[?25l
+[0K[?25h[0;1mdiff --git a/scale-samples/assessment.Rmd b/scale-samples/assessment.Rmd[0m[0K[?25l
+[0;1mindex a5f9bf5..5a00839 100644[0m[0K
+[0;1m--- a/scale-samples/assessment.Rmd[0m[0K
+[0;1m+++ b/scale-samples/assessment.Rmd[0m[0K
+[0;36m@@ -50,7 +50,34 @@[0m Here we create some variables we'll use throughout this process. We create [0Kt[19G[?25h[?25l
+hem[0K
+[0K
+ ```[0K
+[0K
+[0;31m-## [0m[0K
+[0;32m+## <Summary>[0m[0K
+:[0K[?25h[?25l[0;32m+[0m[0K
+[0;32m+```{r}[0m[0K
+[0;32m+[0m[0K
+[0;32m+# with(data = Stripers, expr = {[0m[0K[1G[?25h[?25l
+[0;32m+#[0;37;41m   [0m[0K
+[0;32m+#   y <- as.numeric(format(RelDate, format = "%Y"))[0m[0K
+[0;32m+#[0;37;41m [0m[0K
+[0;32m+#   table(y, RelAge, useNA = "ifany", dnn = c("Year", "Age"))[0m[0K
+[0;32m+#[0;37;41m   [0m[0K
+[0;32m+# })[0m[0K
+[0;32m+[0m[0K
+:[0K[?25h[?25l[0;32m+sum(is.na(Stripers[["Count"]]))[0m[0K
+[0;32m+[0m[0K
+[0;32m+# count of samples from 2010 on[0m[0K
+[0;32m+scale_samples <- aggregate([0m[0K
+[0;32m+  formula = Count ~ format(RelDate, format = "%Y"),[0m[0K
+[0;32m+  data = Stripers,[0m[0K
+[0;32m+  FUN = sum,[0m[0K
+[0;32m+  # subset = RelAge %in% 0:1 | is.na(RelAge)[0m[0K
+[0;32m+  subset = RelDate > "2009-12-31",[0m[0K
+[0;32m+  na.action = na.pass[0m[0K
+[0;32m+)[0m[0K
+:[0K[?25h[?25l[0;32m+[0m[0K
+[0;32m+colnames(scale_samples) <- c("Year", "Count")[0m[0K
+[0;32m+[0m[0K
+[0;32m+```[0m[0K
+[0;32m+[0m[0K
+[0K
+ ## Save Summary[0K
+[0K
+[0;30;47m(END)[0m[0K[?25h[?25l[0K[?25h[0;30;47m(END)[0m[0K[?25l[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[14G[?25h[15G[?25l$ git commit -,[0K[?25h[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25hf[0K[?25l$ git commit -m "[0K[?25hm[0K[?25l$ git commit -m "[0K[?25hf[0Ko[0K[?25lr[0K[20G[?25h[21G[22G[?25l$ git commit -m "for c[0K[?25h[?25lo[0K[23G[?25h[24G[?25l$ git commit -m "for con[0K[?25ht[0K[?25l$ git commit -m "for con[0K[?25h[?25l$ git commit -m "for co[0K[?25hu[0K[?25ln[0K[25G[?25h[26G[?25l$ git commit -m "for count[0K[?25h[28G[?25l$ git commit -m "for count o[0K[?25hf[0K[31G[?25l$ git commit -m "for count of s[0K[?25ha[0Km[0K[?25lp[0K[34G[?25h[35G[?25l$ git commit -m "for count of sampl[0K[?25he[0Ks[0K[?25l$ git commit -m "for count of sample[0K[?25h[?25l$ git commit -m "for count of sampl[0K[?25h[?25l$ git commit -m "for count of samp[0K[?25h[?25l$ git commit -m "for count of sam[0K[?25h[?25l$ git commit -m "for count of sa[0K[?25h[?25l$ git commit -m "for count of s[0K[?25h[?25l$ git commit -m "for count of[0K[?25h[?25l$ git commit -m "for count o[0K[?25h[?25l$ git commit -m "for count[0K[28G[?25h[27G[?25l$ git commit -m "for co[0K[?25h[?25l$ git commit -m "for[0K[22G[?25h[21G[?25l$ git commit -m "fo[0K[?25h[?25lr[0K[20G[?25h[21G[22G[?25l$ git commit -m "for s[0K[?25ha[0Km[0Kp[0Kl[0Ke[0K[29G[?25l$ git commit -m "for sample c[0K[?25ho[0Ku[0Kn[0K[?25lt[0K[33G[?25h[34G[?25l$ git commit -m "for sample count"[0K[?25h[?25l
+[0K[?25h[master 33a7323] for sample count[0K[?25l
+ 1 file changed, 28 insertions(+), 1 deletion(-)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git d[0K[7G[?25h[8G[?25l$ git[0K[7G[?25h[?25l$ git a[0K[?25hd[0Kd[0K[11G[?25l$ git add d[0K[?25ha[0Kt[0Ka[0K/[0Kt[0Ka[0K[?25lg[0K[18G[?25h[19G[?25l$ git add data/tagg[0K[?25hi[0Kn[0Kg[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25hf[0Ko[0Kr[0K[22G[?25l$ git commit -m "for e[0K[?25h[?25la[0K[23G[?25h[24G[?25l$ git commit -m "for eas[0K[?25he[0K[27G[?25l$ git commit -m "for ease o[0K[?25hf[0K[30G[?25l$ git commit -m "for ease of a[0K[?25h[?25ln[0K[31G[?25h[32G[?25l$ git commit -m "for ease of ana[0K[?25hl[0Ky[0Kt[0Ki[0Kc[0Ks[0K"[0K[?25l
+[0K[?25h[master 0221caa] for ease of analytics[0K[?25l
+ 2 files changed, 1 insertion(+), 1 deletion(-)[0K
+ rewrite data/tagging/StripedBass.rds (82%)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git commit -m "for ease of analytics"[0K[?25h[?25l$ git add data/tagging[0K[?25h[?25l$ git commit -m "for sample count"[0K[?25h[?25l$ git diff HEAD[0K[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l$ git commit -m "for ease of analytics"[0K[?25h[?25l$ git add data/tagging[0K[?25h[?25l$ git commit -m "for sample count"[0K[?25h[?25l$ git diff HEAD[0K[?25h[?25l
+[0K[?25h[0;1mdiff --git a/scale-samples/assessment.Rmd b/scale-samples/assessment.Rmd[0m[0K[?25l
+[0;1mindex 5a00839..102cee3 100644[0m[0K
+[0;1m--- a/scale-samples/assessment.Rmd[0m[0K
+[0;1m+++ b/scale-samples/assessment.Rmd[0m[0K
+[0;36m@@ -78,6 +78,14 @@[0m colnames(scale_samples) <- c("Year", "Count")[0K
+[0K
+ ```[0K
+[0K
+[0;32m+```{r}[0m[0K
+[0;32m+[0m[0K
+[0;32m+sum(scale_samples[["Count"]])[0m[0K
+:[0K[?25h[?25l[0;32m+[0m[0K
+[0;32m+```[0m[0K
+[0;32m+[0m[0K
+[0;32m+[0m[0K
+[0;32m+[0m[0K
+[0K
+ ## Save Summary[0K
+[0K
+[0;30;47m(END)[0m[0K[?25h[?25l[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25h"[0K[18G[?25l$ git commit -m "t"[0K[19G[?25h[?25l$ git commit -m "to"[0K[20G[?25h[?25l$ git commit -m "to "[0K[21G[?25h[?25l$ git commit -m "to g"[0K[22G[?25h[?25l$ git commit -m "to ge"[0K[23G[?25h[?25l$ git commit -m "to get"[0K[24G[?25h[?25l$ git commit -m "to get "[0K[25G[?25h[?25l$ git commit -m "to get t"[0K[26G[?25h[?25l$ git commit -m "to get to"[0K[27G[?25h[?25l$ git commit -m "to get tot"[0K[28G[?25h[?25l$ git commit -m "to get tota"[0K[29G[?25h[?25l$ git commit -m "to get total"[0K[30G[?25h[?25l$ git commit -m "to get total "[0K[31G[?25h[?25l$ git commit -m "to get total c"[0K[32G[?25h[?25l$ git commit -m "to get total co"[0K[33G[?25h[?25l$ git commit -m "to get total cou"[0K[34G[?25h[?25l$ git commit -m "to get total coun"[0K[35G[?25h[?25l$ git commit -m "to get total count"[0K[36G[?25h[?25l
+[0K[?25h[master 670879a] to get total count[0K[?25l
+ 1 file changed, 8 insertions(+)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git a[0K[7G[?25h[8G[?25l$ git ad[0K[?25h[?25l$ git a[0K[?25h[?25l$ git[0K[7G[?25h[6G[?25l$ gi[0K[?25h[?25l$ g[0K[?25h[?25l$[0K[3G[?25h[?25l$ git commit -m "to get total count"[0K[?25h[?25l$ git diff HEAD[0K[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git add scale-samples/assessment.Rmd[0K[?25h[?25l$ git commit -m "to get total count"[0K[?25h[36G[?25l$ git commit -m "to get total coun"[0K[35G[?25h[?25l$ git commit -m "to get total cou"[0K[34G[?25h[?25l$ git commit -m "to get total co"[0K[?25h[33G[?25l$ git commit -m "to get total c"[0K[32G[?25h[?25l$ git commit -m "to get total "[0K[?25h[31G[?25l$ git commit -m "to get total"[0K[30G[?25h[?25l$ git commit -m "to get tota"[0K[29G[?25h[?25l$ git commit -m "to get tot"[0K[28G[?25h[?25l$ git commit -m "to get to"[0K[27G[?25h[?25l$ git commit -m "to get t"[0K[26G[?25h[?25l$ git commit -m "to get "[0K[25G[?25h[?25l$ git commit -m "to get"[0K[24G[?25h[?25l$ git commit -m "to ge"[0K[23G[?25h[?25l$ git commit -m "to g"[0K[22G[?25h[?25l$ git commit -m "to "[0K[?25h[21G[?25l$ git commit -m "to"[0K[?25h[20G[?25l$ git commit -m "t"[0K[19G[?25h[?25l$ git commit -m ""[0K[18G[?25h[?25l$ git commit -m "u"[0K[19G[?25h[?25l$ git commit -m "us"[0K[20G[?25h[?25l$ git commit -m "usi"[0K[21G[?25h[?25l$ git commit -m "usin"[0K[22G[?25h[?25l$ git commit -m "using"[0K[23G[?25h[?25l$ git commit -m "using "[0K[24G[?25h[?25l$ git commit -m "using a"[0K[25G[?25h[?25l$ git commit -m "using ad"[0K[26G[?25h[?25l$ git commit -m "using add"[0K[27G[?25h[?25l$ git commit -m "using adde"[0K[28G[?25h[?25l$ git commit -m "using added"[0K[29G[?25h[?25l$ git commit -m "using added "[0K[30G[?25h[?25l$ git commit -m "using added"[0K[29G[?25h[?25l$ git commit -m "using adde"[0K[28G[?25h[?25l$ git commit -m "using add"[0K[27G[?25h[?25l$ git commit -m "using ad"[0K[26G[?25h[?25l$ git commit -m "using a"[0K[25G[?25h[?25l$ git commit -m "using "[0K[24G[?25h[?25l$ git commit -m "using n"[0K[25G[?25h[?25l$ git commit -m "using ne"[0K[26G[?25h[?25l$ git commit -m "using new"[0K[27G[?25h[?25l$ git commit -m "using new "[0K[28G[?25h[?25l$ git commit -m "using new f"[0K[29G[?25h[?25l$ git commit -m "using new fi"[0K[30G[?25h[?25l$ git commit -m "using new fie"[0K[31G[?25h[?25l$ git commit -m "using new fiel"[0K[32G[?25h[?25l$ git commit -m "using new field"[0K[33G[?25h[?25l
+[0K[?25h[master c1b91d4] using new field[0K[?25l
+ 1 file changed, 3 insertions(+), 3 deletions(-)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[0m[0K]0;:/c/Users/jdubois/Documents/RProjects/StripedBassPopMetrics[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git a[0K[?25hd[0Kd[0K[11G[?25l$ git add s[0K[?25hc[0Ka[0Kl[0Ke[0K-[0K[?25ls[0K[17G[?25h[18G[?25l$ git add scale-sa[0K[?25hm[0Kp[0K[?25ll[0K[21G[?25h[22G[?25l$ git add scale-sample[0K[?25hs[0K/[0Ka[0Ks[0Ks[0Ke[0Ks[0Ks[0Km[0Ke[0Kn[0Kt[0K.[0KR[0Km[0Kd[0K[?25l
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git c[0K[?25ho[0Km[0Km[0Ki[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25hf[0Ko[0Kr[0K[22G[?25l$ git commit -m "for a[0K[?25hn[0Kn[0Ku[0Ka[0Kl[0K[29G[?25l$ git commit -m "for annual c[0K[?25ho[0Ku[0Kn[0Kt[0Ks[0K"[0K[?25l
+[0K[?25h[master 333bc2c] for annual counts[0K[?25l
+ 1 file changed, 20 insertions(+)[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git s[0K[?25ht[0Ka[0Kt[0Ku[0Ks[0K[?25l
+[0K[?25hOn branch master[0K[?25l
+Your branch is ahead of 'origin/master' by 1 commit.[0K
+  (use "git push" to publish your local commits)[0K
+[0K
+nothing to commit, working tree clean[0K
+[0K[?25h[?25l
+[0;32mjdubois@WR3MXL52128T4 [0;35m [0;33m~/Documents/RProjects/StripedBassPopMetrics[0;36m (master)[0m[0K
+$[0K[3G[?25h

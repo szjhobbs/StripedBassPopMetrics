@@ -1,0 +1,655 @@
+---
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+now <- Sys.Date()
+
+```
+
+## Introduction
+
+
+
+## Libraries
+
+We load the `sportfish` package, currently available on GitHub. For now (`r now`), this is the only package required.
+
+```{r load-libraries}
+
+library(sportfish)
+# library(package)
+
+```
+
+## Load Data
+
+We load `StripedBass.rds` file from directory `data/tagging`. We only need this file for analytics for now (`r now`).
+
+```{r load-data}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+# Tagging <- new.env()
+# ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+Stripers <- readRDS(file = file.path(data_dir, "StripedBass.rds"))
+
+# clean up
+rm(data_dir)
+
+```
+
+Here we create some variables we'll use throughout this process. We create them here and now for convenience.
+
+```{r variables}
+
+age_len_vars <- with(data = Stripers, expr = {
+  
+  # bfl <- RelFL %in% 0:9
+  # bage <- RelAge %in% 0:1
+  
+  flNA <- sum(is.na(RelFL))
+  ageNA <- sum(is.na(RelAge))
+  
+  fl_rng <- range(RelFL[!RelFLFlag], na.rm = TRUE)
+  age_rng <- range(RelAge, na.rm = TRUE)
+  
+  list(
+    FishCount = sum(Count),
+    FLRemove = sum(RelFLFlag),
+    # AgeRemove = sum(bage),
+    CountFLNA = sum(flNA),
+    CountAgeNA = sum(ageNA),
+    RangeFL = fl_rng,
+    RangeAge = age_rng,
+    RangeFLtxt = paste0(fl_rng, collapse = " to "),
+    RangeAgetxt = paste0(age_rng, collapse = " to ")
+  )
+})
+
+```
+
+## Summary: Data Overview
+
+In our entire dataset (n = `r age_len_vars[["FishCount"]]` Striped Bass), fork length ranges from `r age_len_vars[["RangeFLtxt"]]`, with `r age_len_vars[["CountFLNA"]]` as NA. Fork lengths recorded as 0-9 are errors made when we migrated from dBase to Access or were entry errors made in the old system (dBase). We will remove these records (n = `r age_len_vars[["FLRemove"]]`) for this purpose herein. (At some later date, we will investigate these errors by retrieving the physcial datasheets.)
+
+Ages range from `r age_len_vars[["RangeAgetxt"]]`, with `r age_len_vars[["CountAgeNA"]]` as NA. Ages recorded as 0 or 1 are **not** actual ages (`0` *no scale sample*; `1` *could not determine age*). Values of `0` and `1` have been set to NA.
+
+Below, we display a length table and an age table. The prefix `Rel` indicates `release`, as in tag release.
+
+```{r fl-age}
+
+lapply(Stripers[c("RelFL", "RelAge")], FUN = table, useNA = "ifany", dnn = NULL)
+
+```
+
+#### Fork Length as 0-->9
+
+Below, we show the years and count for which fork lengths appear as single digit (0-9). Likely, the '0s' for 2011 & 2012 are entry errors (i.e., entry should have been blank, instead a '0' was entered).
+
+```{r count-fl}
+
+with(data = Stripers, expr = {
+  b <- RelFL %in% 0:9
+  table(RelYear[b], RelFL[b], useNA = "ifany")
+})
+
+```
+
+## Subset `Striper` Dataset
+
+Below, we remove from our dataset all single-digit lengths, as these are likely entry errors. We use `subset()` to remove these records (n = `r sum(Stripers[["RelFLFlag"]])`).
+
+```{r stripers-subset}
+
+Stripers <- subset(Stripers, subset = !RelFLFlag)
+
+```
+
+## Scale Count
+
+```{r years-no-age, echo=FALSE}
+
+year_age <- split(Stripers[["RelAge"]], f = Stripers[["RelYear"]])
+
+years_no_age <- vapply(year_age, FUN = function(a) {
+  all(is.na(a))
+}, FUN.VALUE = logical(1L))
+
+yna <- paste0(names(years_no_age[which(years_no_age)]), collapse = "; ")
+
+age_count <- vapply(year_age, FUN = function(a) {
+  sum(is.na(a))
+}, FUN.VALUE = numeric(1L))[which(years_no_age)]
+
+sample_count <- ceiling(sum(age_count) / 1000) * 1000
+
+# clean up
+rm(year_age, years_no_age, age_count)
+
+```
+
+We have not aged scales for the following years: `r yna`. This leaves a backlog of nearly `r sample_count` samples. This volume is too much for any one group to age. So herein, we propose ageing a sub-sample and demonstrate possible methods by which to choose said sub-sample.
+
+#### Tagged Fish Only
+
+Over the last decade, we have implemented "creeling" as a field method. This method allows for processing fish when catch is exceedingly high (i.e., hundreds to thousands of fish) and tagging each fish would be impractical and infeasible. Creeling allows us to collect information (i.e., length, sex, and sometimes scale sample) and still process all fyke traps in reasonable time.
+
+```{r tagged-only, echo=FALSE}
+
+# FIO, un-comment as needed
+# sum(is.na(Stripers[["Count"]]))
+
+# count of samples from 2010 on
+scale_samples <- aggregate(
+  formula = Count ~ RelYear,
+  data = Stripers,
+  FUN = sum,
+  subset = RelYear > 2009 & (TagAction %in% "1" | is.na(TagAction)),
+  na.action = na.pass
+)
+
+tot_samples <- floor(sum(scale_samples[["Count"]]) / 1000) * 1000
+
+```
+
+Given various time constraints, we were not consistent in taking scale samples from creeled fish. So, we can reduce our sample size by using tagging fish only. (For each fish we tag, we always endeavor to collect a scale sample.) Below is a table of samples (tagged fish) for our years in question (i.e., without ages). This leaves us about `r tot_samples` samples from which to then sub-sample.
+
+```{r sample-table}
+
+scale_samples
+
+```
+
+## Sub-Sampling: Method Development
+
+Here we turn our attention to fish we have aged in order to develop a sensible --- and perhaps statistically sound --- sub-sampling method. Let's plot length given age of our entire dataset.
+
+```{r plt-len_age, eval=FALSE}
+
+# pt_col <- adjustcolor(
+#   col = gray(seq(from = 0, to = 0.5, length.out = 25)),
+#   alpha.f = 1/4
+# )
+
+plot(
+  formula = RelFL ~ jitter(RelAge),
+  data = Stripers,
+  col = rgb(red = 0, green = 0, blue = 0, alpha = 0.1),
+  pch = 20,
+  xlab = "Age (from scale reading)",
+  ylab = "Fork length (cm)"
+)
+
+```
+
+#### Length Quantile (by Age)
+
+```{r annual-tag_action, eval=FALSE}
+
+# chunk FIO
+
+with(data = Stripers, expr = {
+  
+  b <- RelYear > 2009
+  
+  ya <- table(RelYear[b], TagAction[b], useNA = "ifany")
+  y <- table(RelYear[b], useNA = "ifany")
+  a <- table(TagAction[b], useNA = "ifany")
+  
+  list(
+    YearAction = ya,
+    Year = y,
+    Action = a
+  )
+  
+})
+
+```
+
+To get some sense of length range and spread by age, we calculate six quantiles (by 0.2) and display results below. There are some obvious outliers, for example 92 cm FL assigned age-3.
+
+```{r len-quantile}
+
+# probs <- seq(from = 0.1, to = 1, by = 0.2)
+probs <- seq(from = 0, to = 1, by = 0.2)
+
+len_quant <- aggregate(
+  formula = RelFL ~ RelAge,
+  data = Stripers,
+  FUN = quantile,
+  probs = probs,
+  na.rm = TRUE,
+  names = FALSE
+)
+
+len_quant <- data.frame(
+  len_quant[["RelAge"]],
+  len_quant[["RelFL"]]
+)
+
+colnames(len_quant) <- c("Age", paste0("p", probs * 100))
+
+len_quant
+
+```
+
+#### Coefficient of Variation (% CV)
+
+Here we calculate (and then display) annual fork length %CV by age. Each point in the plot below represents a year for which said metric could be calculated (i.e., sample size > 1). We observe fairly tight precision for ages 12 and younger. This is somewhat expected as we (1) collect many more younger fish than older (larger) fish and (2) scales of older fish tend to be more challenging to read (age).
+
+```{r desc-stats-lf}
+
+desc_stat_fl <- aggregate(
+  formula = RelFL ~ RelYear + RelAge,
+  data = Stripers,
+  FUN = function(x) unlist(DescStat(x))
+)
+
+# for ease of viewing & analytics
+desc_stat_fl <- data.frame(
+  desc_stat_fl[c("RelYear", "RelAge")],
+  desc_stat_fl[["RelFL"]],
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+# add measure of precision (CV)
+desc_stat_fl$CV <- with(data = desc_stat_fl, expr = {
+  # (sdev / mean) * 100
+  (sqrt(Var) / Avg) * 100
+})
+
+```
+
+```{r plot-cv}
+
+plot(
+  formula = CV ~ jitter(RelAge),
+  data = desc_stat_fl,
+  col = rgb(red = 0.05, green = 0, blue = 0, alpha = 0.2),
+  pch = 20,
+  xlab = "Age (from scale reading)",
+  ylab = "% CV (of fork length)",
+  cex = 1.5,
+  las = 1
+)
+
+```
+
+
+```{r annual-lf, eval=FALSE}
+
+with(data = Stripers, expr = {
+  
+  b <- RelYear > 2009 & (TagAction %in% 1 | is.na(TagAction))
+  
+  table(RelFL[b], RelYear[b], useNA = "ifany")
+  
+})
+
+# Frequency(x = Stripers[["RelFL"]], binWidth = 1)
+# 
+# freq <- aggregate(
+#   formula = RelFL ~ RelYear,
+#   data = Stripers,
+#   FUN = Frequency,
+#   binWidth = 1,
+#   subset = RelYear > 2009 & (TagAction %in% 1 | is.na(TagAction))
+# )
+
+```
+
+## Assessment
+
+Coggins, Kimura, Lai (cite references)
+
+Here we assess a possible sampling method for to-be-aged samples given extant age-length data. 
+
+#### Age Levels
+
+We described earlier our age data ranges from `r age_len_vars[["RangeAgetxt"]]`. Here we create variable `AgeF` to (1) ensure consistent age range year-to-year and (2) exclude values of 0 & 1 (not ages) and NA. (For convenience, we add `AgeF` to our `Stripers` dataframe.)
+
+```{r age-levels}
+
+age_levels <- with(data = age_len_vars, expr = {
+  RangeAge[1]:RangeAge[2]
+})
+
+# ensures consistent age levels through desired grouping varialbes; i.e., ages
+# 2-20 will be used throughout irrespective if a year's age range is smaller
+# than min-max
+Stripers$AgeF <- factor(
+  Stripers[["RelAge"]],
+  levels = age_levels,
+  exclude = c(0, 1, NA)
+)
+
+```
+
+#### Split Data
+
+For our analytics, we split length and age data by year and by capture method (gill nets `1`; fyke traps `2`). We subset on years before 2010, as years beyond 2009 have not been aged.
+
+```{r split-la}
+
+svars <- c("RelFL", "AgeF")
+gvars <- c("RelYear", "CapMethod")
+
+# nothing aged beyond 2009
+b_year <- Stripers[["RelYear"]] < 2010
+
+split_la <- split(
+  Stripers[b_year, svars],
+  f = Stripers[b_year, gvars],
+  drop = TRUE
+)
+
+# clean up
+rm(b_year)
+
+```
+
+#### Precision: Age-length Key 
+
+Here we check precision of each age-length key (ALK). *Each* as defined by our split variable, so one age-length key each per capture method per year. We create each ALK using three sampling methods: fixed (f); proportional (p); and random (r). Then we assess variance for each ALK.
+
+We use R's `lapply()` to loop through our split data and `vapply()` to loop through the sampling methods. We create `fv` for convenience. This variable is supplied to R's `vapply()` `FUN.VALUE` parameter.
+
+```{r fun-value}
+
+# for naming output list
+fv_names <- c(
+  "N", "L", "A", "Nj", "lj", "nj",
+  "nij", "qij", "pi", "VarPi",
+  "RemovedNA", "SizeArgs"
+)
+
+# as argument to FUN.VALUE parameter in vapply()
+fv <- setNames(
+  object = as.list(rep(NA, times = length(fv_names))),
+  nm = fv_names
+)
+
+# because SizeArgs output is a list
+fv$SizeArgs <- list(n = NA, type = NA_character_)
+
+```
+
+We use nested `lapply()`s to loop through our split data (length and age by year and capture method) and our three sampling methods (fixed, proportional, and random). Variable `alkp` will include (for each year + capture method) `VarTot` mean and variance, which we can plot to observe sampling method effectiveness. <not keen on this last sentence>
+
+```{r alk-prec}
+
+# type: c("fixed", "prop", "random")
+# n: default = 1500 (used for fixed & prop)
+
+alkp <- lapply(split_la, FUN = function(d) {
+  
+  p <- list(f = "fixed", p = "prop", r = "random")
+  
+  lapply(p, FUN = function(p) {
+    ALKPrecision(data = d, age = AgeF, len = RelFL, type = p)
+  })
+  
+})
+
+# will use in plotting & subsetting (capture method) in chunks below
+nms <- strsplit(names(alkp), split = "\\.")
+
+```
+
+```{r var-tot-rng}
+
+# for plotting empty plot ensuring y axis covers entire data range
+var_tot_rng <- vapply(alkp, FUN = function(x) {
+  
+  res <- vapply(c("f", "p", "r"), FUN = function(z) {
+    # range(x[[z]][["VarTot"]])
+    mn <- x[[z]][["MeanVT"]]
+    se <- sqrt(x[[z]][["VarVT"]] / x[[z]][["Reps"]])
+    ci <- se * qnorm(1 - 0.05 / 2)
+    c(mn - ci, mn + ci)
+  }, FUN.VALUE = numeric(2L))
+  
+  range(res)
+  
+}, FUN.VALUE = numeric(2L))
+
+year_range <- range(
+  as.numeric(vapply(nms, FUN = `[`, FUN.VALUE = character(1L), 1))
+)
+
+```
+
+
+```{r}
+
+plot(x = year_range, y = range(var_tot_rng), type = "n")
+
+out <- Map(function(x, y) {
+  
+  if (x[2] == "2") return(NULL)
+  
+  # for the three sampling methods
+  color <- c(f = 1, p = 2, r = 3)
+  
+  # plot points & output CIs; for now will not plot CIs, as CIs are very small &
+  # for this purpose are not entirely consequential (08-Jul-2019)
+  res <- vapply(names(color), FUN = function(m) {
+    
+    # set x&y values along with 95% CI
+    se <- sqrt(y[[m]][["VarVT"]] / y[[m]][["Reps"]])
+    ci <- se * qnorm(1 - 0.05 / 2)
+    xvals <- as.numeric(x[1])
+    mn <- y[[m]][["MeanVT"]]
+    
+    points(x = xvals, y = mn, col = color[m])
+    # segments(x0 = xvals, y0 = mn - ci, y1 = mn + ci, col = "red")
+    
+    # for vapply output
+    c(LL = mn - ci, UL = mn + ci)
+    
+  }, FUN.VALUE = numeric(2L))
+  # end vapply
+  
+  # if statement to ensure legend plots only once; could do this outside the Map
+  # loop I suppose, but wouldn't have access to color variable; not ideal but
+  # works for now (08-Jul-2019)
+  if (x[1] <= 1969) {
+    legend(
+      x = 1969,
+      y = 0.003,
+      legend = names(color),
+      pch = 1,
+      col = color,
+      bty = "n",
+      ncol = 3,
+      xpd = TRUE
+    )
+  }
+  
+  # output CIs for viewing as desired
+  res
+  
+}, nms, alkp)
+# end Map
+
+```
+
+
+
+
+```{r eval=FALSE}
+
+plot(r ~ jitter(V1), data = plotdata, subset = V2 %in% 2, 
+     col = rgb(0 , 0, 0, 0.1), pch = 20)
+
+
+
+plot(c(1, 67), c(0.00042, 0.002), type = "n")
+points(rep(1, 100), y = var_tot$`1969.1`)
+
+
+points(x = rep(1:67, each = 100), y = unlist(var_tot))
+
+# vartot is buried in lists
+var_tot <- lapply(alkp, FUN = function(x) {
+  # vapply(c("f", "p", "r"), FUN = function(y) {
+  pt <- vapply(c("f"), FUN = function(y) {
+    x[[y]][["VarTot"]]
+  }, FUN.VALUE = numeric(100L))
+
+  pt[, "f"]
+  
+  
+  
+  
+  
+})
+
+```
+
+```{r boot-strap-fns}
+
+# herein we define functions for bootstrapping total variance
+
+Sum <- function(data, indices) {
+  # indices allows boot to select sample 
+  d <- data[indices]
+  # to get total variance (sum all variance)
+  sum(d, na.rm = TRUE)
+}
+
+BtStrpVarTot <- function(v, reps = 1000) {
+  r <- boot::boot(data = v, statistic = Sum, R = reps)
+  rci <- boot::norm.ci(r)
+  c(V = r[["t0"]], LL = rci[[2]], UL = rci[[3]])
+}
+
+```
+
+
+
+
+```{r }
+
+var_tot <- vapply(alkp, FUN = function(x) {
+  # vapply(x["VarPi", ], FUN = BtStrpVarTot, FUN.VALUE = numeric(3L))
+  vapply(x[["f"]][["VarTot"]], FUN = BtStrpVarTot, FUN.VALUE = numeric(3L))
+}, FUN.VALUE = matrix(data = as.double(NA), nrow = 3, ncol = 100))
+
+# for format to dataframe
+var_tot <- t(as.data.frame(var_tot))
+flds <- do.call(what = rbind, args = strsplit(rownames(var_tot), split = "\\."))
+
+var_tot <- data.frame(
+  Year = as.numeric(flds[, 2]),
+  CapMethod = factor(
+    flds[, 3],
+    levels = c("1", "2"),
+    labels = c(`1` = "GN", `2` = "FT"),
+  ),
+  SampleType = factor(flds[, 1], levels = c("f", "p", "r")),
+  var_tot,
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+```
+
+
+```{r}
+
+ggplot(data = var_tot, mapping = aes(x = Year, y = V)) +
+  geom_point() +
+  facet_grid(facets = SampleType ~ CapMethod)
+
+
+```
+
+
+
+
+
+```{r eval=FALSE}
+
+rng <- with(data = var_tot, expr = {
+  
+  
+  
+  list(
+    X = range(Year),
+    Y = range(c(f, p, r))
+  )
+  
+})
+
+plot(
+  x = rng[["X"]],
+  y = rng[["Y"]],
+  type = "n",
+  xaxt = "n",
+  yaxt = "n",
+  las = 1
+)
+
+xt <- axTicks(side = 1)
+yt <- axTicks(side = 2)
+
+points(
+  f ~ Year,
+  data = var_tot,
+  subset = Year < 2010 & CapMethod %in% "FT",
+  type = "p"
+)
+points(
+  p ~ Year,
+  data = var_tot,
+  subset = Year < 2010 & CapMethod %in% "FT",
+  type = "p", col = 2
+)
+
+points(
+  r ~ Year,
+  data = var_tot,
+  subset = Year < 2010 & CapMethod %in% "FT",
+  type = "p", col = 3
+)
+
+
+
+```
+
+
+
+
+## Save Summary
+
+We save the summary to `.csv` file for ease of use in other analytics and for viewing on GitHub.
+
+```{r save-annual_sum}
+
+# write.csv(
+#   annual_length,
+#   file = "fishery/card_sp_length.csv",
+#   row.names = FALSE
+# )
+# 
+# write.csv(
+#   card_summary,
+#   file = "fishery/card_summary.csv",
+#   row.names = FALSE,
+#   na = ""
+# )
+
+```
+
+---
+
+CDFW, SportFish Unit    
+`r Sys.Date()`

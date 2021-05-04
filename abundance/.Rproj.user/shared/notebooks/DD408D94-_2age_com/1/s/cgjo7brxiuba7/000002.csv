@@ -1,0 +1,5 @@
+"0",""
+"0","creel$BySex <- lapply(creel[[""Data""]], FUN = function(d) {"
+"0","  Split(data = d, splitVars = Sex, drop = FALSE)"
+"0","})"
+"0",""

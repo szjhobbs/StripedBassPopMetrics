@@ -1,0 +1,100 @@
+---
+
+---
+
+
+
+<!-- Tagging Data -->
+<!-- (1) add field for length category (unk, sub, leg) -->
+<!-- (2) expand dataframe on count field (could do #1 after this) -->
+<!-- (3) Apply `AgeEach()` to expanded dataframe (use bin width = 1, but may -->
+<!--     want to try binning very small & very large fish in bigger bins) -->
+<!--     (a) should then have number that cannot be aged -->
+<!--     (b) identify those that cannot be aged and possibly assign to age -->
+<!--         based on closes bin (for example fish 100 assigned age-10, bu -->
+<!--         fish 105 only one in bin & has no age could be age-10 too) -->
+<!--     (c) complete table(is.na(Ages), `LenCat`,useNA = "ifany") to -->
+<!--         help with 'b' -->
+<!--     (d) the point is to age as many as possible -->
+<!-- (4) somewhere in the process include only legal sized fish [maybe] -->
+<!-- (5) table by age of fish tagged & all others (needed to get RAC) -->
+<!-- (6) then get C for (M*C)/R -->
+<!-- (7)  -->
+
+<!-- Consider -->
+<!-- (1) if not already, set sex to M, F, U OR 1, 2, 0 (need to include unknown) -->
+<!-- (2) what to do with age (i.e, set as factor from 2 to max) -->
+<!-- (3) what to do with length (weed out odd lengths e.g., 9) & do I -->
+<!--     set as factor? -->
+
+<!-- (5) After expanding & (perhaps) application of `AgeEach()` -->
+<!--     a. then get lengths with no age -->
+<!--     b. then get count no length & no age -->
+<!--     c. then get count all legal sized (by tag action) -->
+<!--     d. then get count recaps -->
+<!--     e.  -->
+
+<!--    big problem is how to programmatically assign age to fish when none -->
+<!--     were aged at that length (kind of becomes a classification problem) -->
+
+<!-- (5) split by year -->
+<!-- (6)  -->
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+```{r load-libraries}
+
+# sportfish currently available on GitHub
+library(sportfish)
+# library(package)
+
+```
+
+```{r load-data}
+
+# the data directory for bay study
+data_dir <- "U:/SportFish/Staff Files/JDuBois/0_RProjects/StripedBassPopMetrics/data/tagging"
+
+Tagging <- new.env()
+ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+# clean up
+rm(data_dir)
+
+```
+
+## Tagging 
+
+```{r tagging-age_com, child="_1age_com.Rmd"}
+```
+
+## Creel 
+
+```{r creel-age_com, child="_2age_com.Rmd"}
+```
+
+## Abundance 
+
+```{r mcr, child="_3mcr_cc_tag.Rmd"}
+```
+
+```{r mcr-tag-only, child="_3mcr_tag.Rmd"}
+```
+
+## CPUE
+
+```{r cpue, child="_4cpue_index.Rmd"}
+```
+
+```{r cpue, child="_4cpue_creel.Rmd"}
+```
+
+## Age & Length
+
+```{r cpue, child="_5age_freq.Rmd"}
+```

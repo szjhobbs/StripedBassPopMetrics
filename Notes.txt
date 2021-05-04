@@ -1,0 +1,22 @@
+
+08-Apr-2016
+
+Cleaned up project directory by moving all stuff to 'old_stuff' directory. I am trying to make all project folders universal in terms of subdirectories and naming conventions.
+
+Used Analysis-LenghtFreq code to get data for J. Smith (Washington state researcher) but did not complete any length frequency dist. All J. Smith wanted was raw mark-recap data.
+
+11-Apr-2016
+
+TODO: add Git version control
+TODO: complete code for LF dist & other analytics
+
+10-Aug-2016
+
+Per Marty's request (annual performance reports) I needed to re-run code in StripedBassPopMetrics.Rmd. The code failed in the catch curve section, and it took some time to diagnose the source of error (see functions_len_freq.R, line 55). This highlights what I know already, that I need to re-write the StripedBassPopMetrics.Rmd code and some of the source files, like functions_survival_rate.R and functions_harvest_rate.R, where I should be using methods instead of functions.
+
+I got the code to work, as a quick fix.
+
+11-Aug-2016
+
+Was able to finagle code in "StripedBassPopMetrics.Rmd" but code & corresponding source files will need updating at some point. Changed code in "functions_survival_rate.R" to fix the flaw in the line - R12_all <- sum(dat[x + 1, , 3], na.rm = TRUE). Should be x and not x+1 as R12 looks at second-year tag returns from year not year+1. Again at some point I'll want to revamp this code.
+

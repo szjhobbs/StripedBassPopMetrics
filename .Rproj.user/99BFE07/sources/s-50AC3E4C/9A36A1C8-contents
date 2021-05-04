@@ -1,0 +1,61 @@
+
+
+# Tue Jul 07 10:55:13 2020 ------------------------------
+
+
+with(data = Tagging[["CreelCensus"]], expr = {
+
+  table(CYear, Hours > 900, useNA = "ifany")
+
+  # range(Hours, na.rm = TRUE)
+
+  t(table(Hours, useNA = "ifany"))
+
+
+})
+
+with(data = Tagging[["CCAge"]], expr = {
+
+  # table(CYear, Hours > 900, useNA = "ifany")
+
+  range(ForkLen, na.rm = TRUE)
+  
+  table(CYear, ForkLen > 80, useNA = "ifany")
+  table(CYear, Sex, useNA = "ifany")
+
+  # t(table(Hours, useNA = "ifany"))
+
+})
+
+aggregate(ForkLen ~ CYear, data = Tagging$CCAge, FUN = range)
+
+
+View(Tagging$CCAge)
+
+
+# Tue Jul 07 16:17:24 2020 ------------------------------
+
+cbind(table(creel$BySex[["2009"]][["Data"]][["m"]][["ForkLen"]]))
+
+# Thu Jul 09 09:09:05 2020 ------------------------------
+
+plot(catch$AgeAssign[["2019"]][["f"]][, c("Aged", "RelFL")])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

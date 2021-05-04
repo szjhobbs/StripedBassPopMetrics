@@ -1,0 +1,46 @@
+---
+
+---
+
+<!-- Basic Information & Program Element Description -->
+
+```{r setup2, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+**Program Title**: Adult Striped Bass Population Estimates  
+**Program Element Number (PEN)**: 002  
+**Agency**: California Department of Fish & Wildlife (CDFW)
+
+Principal Investigators:  
+- [Andrew Danos, CDFW](mailto:andrew.danos@wildlife.ca.gov)  
+- [Jason DuBois, CDFW](mailto:jason.dubois@wildlife.ca.gov)
+
+## Project Description
+
+Nearly annually since 1969, the CDFW has conducted a mark-recapture study on adult (i.e., &ge; age-3) Striped Bass (*Morone saxatilis*). Data collected provide estimates of abundance (absolute and relative), harvest rate (exploitation), survival rate, growth, harvest, and large-scale migration. Age compostion --- as estimated from scale examination --- allows for stratifying some metrics accordingly.
+
+<!-- not sure below belongs in this section -->
+To collect Striped Bass, fyke traps and gill nets are deployed during peak spawning (Mar-Jul, more typically Apr-May). Fyke traps are set along the banks of the upper Sacramento River (e.g., Knights Landing), and gill nets are deployed typically at the confluence of the Sacramento and San Joaquin rivers. For both gear types, time set and time pulled are recorded per each deployment.
+
+To most legal-sized Striped Bass, one disc tag is affixed just below the dorsal fin's spiny section (typically between spines 3 and 4). Up to 10 scales are collected per fish for later age assessment. Fish are measured and sexed, and then released to the area nearest capture. Fish not tagged are enumerated and as time allows measured and (or) sexed. Recaptures (i.e., Striped Bass previously disc tagged) are recorded, noting length, sex, and tag number. Bycatch are identified to species and enumerated.
+
+#### Research Problem
+
+#### Research Objectives
+
+Originally, this project's main goal expressed supporting a robust recreational fishery through effective management. Data collected would establish and then monitor fishing regulations comensurate with said goal. Of further importance was understanding factors affecting abundance given recent and future environmental changes (e.g., water diversion).
+
+Data collected using mark-recapture methods were analyzed to provide important population metrics (e.g., abundance; harvest rate; survival rate). Such metrics would guide appropriate management of the Striped Bass recreational fishery.
+
+#### Research Questions
+
+(1) What are the population dynamics of Striped Bass in the Sacramento-San Joaquin Delta and San Francisco Estuary?
+
+(2) Do existing laws and regulations governing the fishery need to be changed?
+
+(3) Are there any regulatory recommendations needed to change the Striped Bass population?
+
+<!-- project's relation to IEP science strategy & Delta Science Action Agenda -->

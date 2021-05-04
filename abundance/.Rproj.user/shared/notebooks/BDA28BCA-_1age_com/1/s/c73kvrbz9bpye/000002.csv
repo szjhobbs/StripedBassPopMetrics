@@ -1,0 +1,7 @@
+"0",""
+"0","# to categorize each length as sub-legal, legal, or unk"
+"0","Tagging$StripedBass$LenCat <- LengthGroup("
+"0","  data = Tagging[[""StripedBass""]],"
+"0","  regTable = ""sb"""
+"0",")"
+"0",""

@@ -1,0 +1,245 @@
+
+
+
+# some functions ----------------------------------------------------------
+
+AssignWeek <- function(date) {
+  u <- format(date, format = "%U")
+  
+  g <- as.numeric(factor(u))
+  
+  list(
+    CalendarWeek = u,
+    StudyWeek = g
+  )
+  
+}
+
+
+
+
+# get totals count --------------------------------------------------------
+
+aggregate(
+  formula = Count ~ RelDate + DriftTrap + TagAction,
+  data = Tagging[["StripedBass"]],
+  FUN = sum,
+  subset = RelYear %in% 2019#,
+  # na.action = na.omit
+)
+
+testMe <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear %in% 2018,
+  vars = c(DriftTrap, TagAction, Count),
+  splitVars = RelDate
+)
+
+testMe$Daily <- t(vapply(testMe[["Data"]], FUN = function(x) {
+  b <- x[["TagAction"]] %in% "1"
+  c(Tagged = sum(x[b, "Count"]), Total = sum(x[["Count"]]))
+}, FUN.VALUE = numeric(2L), USE.NAMES = T))
+
+testMe$DailyTrap <- lapply(testMe[["Data"]], FUN = function(x) {
+  s <- Split(data = x, splitVars = DriftTrap)
+  out <- vapply(s[["Data"]], FUN = function(y) {
+    b <- y[["TagAction"]] %in% "1"
+    c(Tagged = sum(y[b, "Count"]), Total = sum(y[["Count"]]))
+  }, FUN.VALUE = numeric(2L), USE.NAMES = T)
+  t(out)
+})#, FUN.VALUE = numeric(14L), USE.NAMES = T)
+
+vapply(testMe$DailyTrap, FUN = nrow, FUN.VALUE = numeric(1L))
+
+# some effort stuff -------------------------------------------------------
+
+head(Tagging$Effort)
+
+# effort <- aggregate(
+#   formula = DriftTrap ~ RelDate,
+#   data = Tagging[["Effort"]],
+#   FUN = length,
+#   subset = RelYear %in% 2019
+# )
+# 
+# DescStat(effort[["DriftTrap"]])
+
+effort <- Split(
+  data = Tagging[["Effort"]],
+  subset = RelYear %in% 2019,
+  vars = c(StartTime, EndTime, DriftTrap),
+  splitVars = RelDate
+)
+
+# EffortSb(
+#   data = Tagging[["Effort"]],
+#   sTime = StartTime,
+#   eTime = EndTime,
+#   netNum = DriftTrap
+# )
+
+# effort$Summary <- lapply(effort[["Data"]], EffortSb, StartTime, EndTime, DriftTrap)
+
+# effort$TotalHours <- vapply(effort[["Data"]], FUN = function(x, ..., v = "Hours") {
+#   e <- EffortSb(x, ...)
+#   e[[v]]
+# }, FUN.VALUE = numeric(1L), StartTime, EndTime, DriftTrap, USE.NAMES = FALSE)
+# 
+# effort$HoursAvg <- vapply(effort[["Data"]], FUN = function(x, ..., v = "HoursAvg") {
+#   e <- EffortSb(x, ...)
+#   e[[v]]
+# }, FUN.VALUE = numeric(1L), StartTime, EndTime, DriftTrap, USE.NAMES = FALSE)
+# 
+# effort$NetSets <- vapply(effort[["Data"]], FUN = function(x, ..., v = "NetSets") {
+#   e <- EffortSb(x, ...)
+#   e[[v]]
+# }, FUN.VALUE = numeric(1L), StartTime, EndTime, DriftTrap, USE.NAMES = FALSE)
+
+
+effort$Summary <- t(vapply(effort[["Data"]], FUN = function(x, ...) {
+  e <- EffortSb(x, ...)
+  unlist(e[c("Hours", "HoursAvg", "HoursVar", "NetSets")])
+}, FUN.VALUE = numeric(4L), StartTime, EndTime, DriftTrap, USE.NAMES = TRUE))
+
+
+effort_year <- Split(
+  data = Tagging[["Effort"]],
+  vars = c(RelDate, StartTime, EndTime, DriftTrap),
+  splitVars = RelYear
+)
+
+traps_na <- vapply(effort$Data, FUN = function(x) {
+  b <- is.na(x[["EndTime"]])
+  r <- sum(b)
+  # attr(r, which = "traps") <- paste(unique(x[b, "DriftTrap"]), collapse = ",")
+  tr <- paste(unique(x[b, "DriftTrap"]), collapse = ",")
+  c(r, tr)
+}, FUN.VALUE = character(2L))
+
+# some bycatch stuff ------------------------------------------------------
+
+head(Tagging[["ByCatch"]])
+
+
+
+aggregate(
+  formula = Count ~ SpeciesCode,
+  data = Tagging[["ByCatch"]],
+  FUN = sum,
+  subset = RelYear %in% 2019,
+  na.action = na.omit
+)
+
+with(data = Tagging[["ByCatch"]], expr = {
+  
+  b <- RelYear %in% 2019 & SpeciesCode %in% "KS"
+  
+  list(
+    ChinookTotal = sum(b), 
+    CondColor = table(Condition[b], Coloration[b], useNA = "ifany", dnn = NULL),
+    AdFin = c(Yes = sum(HasAdFin[b]), No = sum(!HasAdFin[b])),
+    LengthRange = range(FL[b], na.rm = TRUE)
+  )
+  
+  
+})
+
+
+
+# by week -----------------------------------------------------------------
+
+# need to figure out how to apply AssignWeek()
+
+Tagging[["StripedBass"]]$Week <- AssignWeek(
+  date = Tagging[["StripedBass"]][["RelDate"]]
+)[["CalendarWeek"]]
+
+testMe2 <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear %in% 2018,
+  vars = c(DriftTrap, TagAction, RelFL, Count),
+  splitVars = Week
+)
+
+week <- vapply(testMe2[["Data"]], FUN = function(x) {
+  b <- x[["TagAction"]] %in% "1"
+  # c(Tagged = sum(x[b, "Count"]), Total = sum(x[["Count"]]))
+  ta <- factor(x[["TagAction"]], levels = as.character(1:7))
+  # aggregate(Count ~ ta, data = x, FUN = sum, na.action = na.pass)
+  aggregate(x["Count"], by = list(TagAction = ta), FUN = sum, drop = F)
+}, FUN.VALUE = as.list(1:2), USE.NAMES = T)
+
+# Other data: flow from CDEC ----------------------------------------------
+
+# river stage data obtained form url below
+# shell.exec("http://cdec.water.ca.gov/")
+
+# beginning url to query Knights Landing data
+main_url <- "http://cdec.water.ca.gov/cgi-progs/selectQuery?"
+
+# set start & end dates from tagging effort data
+# date_range <- range(as.Date(SBEffort$RelDate[SBEffort$RelYear %in% tag_year]))
+
+date_range <- with(data = Tagging[["Effort"]], expr = {
+  b <- RelYear %in% 2019
+  range(as.Date(RelDate[b]))
+})
+
+# elements of the query url (i.e., to the right of the '?')
+station_id <- "Stations=KNL" # KNL = Knights Landing
+sensor_num <- "SensorNums=1"
+dur_code <- "dur_code=E"
+# start & end date based on field dates; time added to ensure getting all stage 
+# data for that date (s/b n=96, as readings are done every 1/4 hour); date +/-
+# some padding - can change as necessary
+start_date <- paste0("Start=", date_range[1] - 2, " 00:00")
+end_date <- paste0("End=", date_range[2] + 3, " 23:45")
+
+# can hard code dates as an option
+# start_date <- "start_date=04/01/2016"
+# end_date <- "end_date=05/31/2016"
+
+# combine elements of query url
+url_query <- paste(
+  station_id,
+  sensor_num,
+  dur_code,
+  start_date,
+  end_date,
+  sep = "&"
+)
+
+# http://cdec.water.ca.gov/dynamicapp/selectQuery?
+# Stations=KNL&SensorNums=1&dur_code=E&Start=2019-10-09&End=2019-10-10
+
+# get HTML from complete url
+knl_stage_html <- htmlParse(file = paste0(main_url, url_query))
+
+# read only the tables from the parsed HTML
+knl_stage_tables <- getNodeSet(doc = knl_stage_html, path = "//table")
+
+# as of now (02-Jun-2016) the first table is the river stage table
+stage_table <- readHTMLTable(doc = knl_stage_tables[[1]])
+
+# re-assign stage_table to cleaned-up version
+stage_table <- data.frame(
+  Date = as.Date(
+    as.character(stage_table[, 1]),
+    format = "%m/%d/%Y %H:%M"
+  ),
+  # DateTime = as.POSIXct(
+  #   as.character(stage_table[, 1]),
+  #   format = "%m/%d/%Y %H:%M"
+  # ),
+  Stage = as.numeric(as.character(stage_table[, 2])),
+  stringsAsFactors = FALSE
+)
+
+# section cleanup
+rm(
+  main_url, station_id, sensor_num,
+  dur_code, start_date, end_date,
+  url_query, knl_stage_html, knl_stage_tables
+)
+
+

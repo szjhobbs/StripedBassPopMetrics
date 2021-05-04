@@ -1,0 +1,96 @@
+---
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+```{r libraries}
+
+library(dplyr)
+# library(odbc)
+
+```
+
+Load data and then subset for Striped Bass only.
+`SpeciesCode`  
+- 335: Bass-Striped
+
+```{r load-data}
+
+dir_dat <- "~/RProjects/1_DataFiles"
+date_extract <- "01302019" # as mmddyyyy
+file_name <- paste0("MLS_Extract_", date_extract, ".csv")
+
+# load MLS-extracted data
+LogData <- read.csv(
+  file = file.path(dir_dat, file_name),
+  header = TRUE,
+  # UTF-8-BOM removes ï.. from first column name
+  fileEncoding = "UTF-8-BOM",
+  stringsAsFactors = FALSE
+)
+
+# subset for sturgeon only
+LogData <- subset(LogData, subset = SpeciesCode %in% 335)
+
+# convert LogDate field to Date class
+LogData$LogDate <- as.Date(LogData[["LogDate"]], format = "%m/%d/%Y")
+
+```
+
+```{r variables}
+
+# only blocks east of GG Bridge
+blocks_sfe <- c(300:308, 488, 489)
+
+```
+
+Using package `dplyr` for ease of creating annual summary. Here we summarize CPFV data for blocks east of the Golden Gate and only for successful (i.e., at least one angler caught & kept at least one sturgeon) trips.
+
+```{r annual-summary}
+
+sfe_successful <- LogData %>% 
+  filter(
+    Block %in% blocks_sfe &
+      NumberKept > 0 &
+      SpeciesCode %in% 335
+  ) %>% 
+  group_by(Year = LogYear) %>% 
+  summarise(
+    Trips = length(SerialNumber),
+    Hours = sum(HoursFished, na.rm = TRUE),
+    Anglers = sum(NumberOfFishers),
+    AnglerHours = sum(HoursFished * NumberOfFishers, na.rm = TRUE),
+    NumKept = sum(NumberKept),
+    CPUE = (NumKept / AnglerHours) * 100
+  )
+
+```
+
+```{r save-data}
+
+# save to this directory
+dr <- "data/cpfv"
+
+saveRDS(object = sfe_successful, file = file.path(dr, "SFESuccessful.rds"))
+# saveRDS(object = , file = file.path(dr, ".rds"))
+
+```
+
+```{r log-extract}
+
+dt <- as.Date(date_extract, format = "%m%d%Y")
+dbn <- "Marine Logs Website (CPFV database)"
+
+write(
+  sprintf("data extracted & cleaned: %s \nfrom %s", dt, dbn),
+  file = file.path(dr, "data-log"),
+  append = FALSE
+)
+
+```
+

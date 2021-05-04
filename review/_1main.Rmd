@@ -1,0 +1,88 @@
+---
+bibliography: references.bib
+csl: american-fisheries-society.csl
+link-citations: true
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+knitr::opts_chunk$set(echo = FALSE)
+
+# https://editor.citationstyles.org/about/
+
+```
+
+```{r load-libraries}
+
+# sportfish currently available on GitHub
+library(sportfish)
+# library(package)
+
+```
+
+```{r load-data, results='hide'}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+Tagging <- new.env()
+ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+# clean up
+rm(data_dir)
+
+```
+
+The California Department of Fish and Wildlife's (CDFW) Bay Delta (Stockton) Sportfish Unit provides herein a detailed review of the adult Striped Bass population study. Such a review was requested by Interagency Ecological Program (IEP) management. This review chronicles the study's history, evaluates original objectives with the needs of today, and provides recommenations for improvements.
+
+`r format(Sys.Date(), format = "%B %d, %Y")`  
+CDFW, Sportfish Unit
+
+# Basic Information & Program Element Description
+
+```{r stu-desc2, child="_2description.Rmd"}
+```
+
+# Program Element Historical Details
+
+```{r stu-history3, child="_3history.Rmd"}
+```
+
+```{r stu-history3, child="_4history.Rmd"}
+```
+
+# Current Resource Requirements
+
+# Program Strengths & Weaknesses
+    
+```{r stu-assessment5, child="_5assessment.Rmd"}
+```
+
+# Data Products
+
+```{r data-products, child="_7data_prod.Rmd"}
+```
+
+# Data Customers
+
+```{r data-customers, child="_8data_users.Rmd"}
+```
+
+# Recommendations
+
+```{r comments, child="_9comments.Rmd"}
+```
+
+# References
+
+<!-- to add reference section before appendices -->
+<!-- https://bookdown.org/yihui/rmarkdown-cookbook/bibliography.html -->
+
+<div id="refs"></div>
+
+# Appendix
+
+```{r data-customers, child="_0appendix.Rmd"}
+```
+

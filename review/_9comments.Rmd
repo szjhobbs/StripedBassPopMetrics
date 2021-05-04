@@ -1,0 +1,114 @@
+---
+
+---
+
+```{r setup9, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Recommendations
+
+Herein, we outline recommendations for consideration. We feel such recommendations (1) provide a clear path forward for the `Adult Striped Bass Population Estimates` study, (2) establish and ensure robustness in data collection and analytics, and (3) offer novel opportunities to further our understanding of California-based Striped Bass.
+
+Sections `Sampling` and `Analytics` offer the most detail. We considered analytics from an operational standpoint. That is, analytics (and outcome) that could possibly improve sampling and (or) population metrics.
+
+#### Population Metrics
+
+Because we have not done so recently, calculate and then disseminate important population metrics (e.g., absolute abundance; harvest rate; survival rate). Provide detailed metadata and caveats as appropriate.
+
+<!-- Traditional Metrics -->
+<!-- - absolute abundance (age & sex stratified) -->
+<!-- - harvest rate -->
+<!-- - survival rate (Ricker 5.1 & catch curve & ChapmanRobson) -->
+<!--   - natural mortality -->
+<!--   - total mortality (1 - survival rate) -->
+<!--   - fishing mortality (exploitation) -->
+<!-- - harvest (as abundance * harvest rate) -->
+<!-- - response rate (to correct for non-response) -->
+
+<!-- - provide some boundaries as to acceptable limits (e.g., harvest rate at 20%, is this OK? Is it panic time - shut down the fishery?) -->
+<!-- - what is acceptable annual harvest? -->
+<!-- - would bay study supply an index like it does for sturgeon? -->
+<!-- - how do we track a year class? -->
+
+#### Sampling
+
+The (citation here; Decision 1485?) mandates annual Striped Bass abundance estimates. To ensure the robustness of such estimates, we suggest implementing the following recommendations.
+
+- **Fyke Traps**: purchase a suitable vessel. CDFW staff tend fyke traps from the river side using a pontoon boat. Such a vessel affords easy access to each fyke trap, a large flat workspace (deck), and up to three (3) tagging or processing stations. The *Kayot* (a pontoon boat manufactured in 1969) serviced this study since 1976. Age and moderate vessel and trailer damage rendered R/V *Kayot* decommissioned upon completing 2019 fieldwork. To replace the *Kayot*, \$50,000 was initially allocated but eventually rescinded because the IEP would not fund single-purpose vessels. We currently have no tagging vessel slated for the 2021 season but are exploring options on a possible "loaner" vessel. Further, the IEP Fleet Resiliency Team is currently investigation whether a custom low-draft and low-freeboard power catamaran can replace an open-deck area workspace that a pontoon boat provides. The estimated cost of this type of catamaran is \$450,000 (CDFW-Andrew Danos, USGS cost for similar vessel).
+
+- **Gill Nets**: re-instate gill net operations. From 1969-2002, gill nets accounted for 60-80% of total catch. We likely would increase the number of tags at large by expending even nominal gill netting effort. Further, we would increase our sampling "footprint," as we would deploy such gear in the lower Sacramento-San Joaquin Delta. Traditionally, we have simultaneously used two research vessels. Two vessels affords increased effort and back-up should one vessel become inundated with fish. Below is a rough estimate of operating cost.
+
+  (1) Personnel
+      - Historic data suggest ~35 days of gill netting per season
+      - Field-Lead-Enivronmental Scientist (1) to act as deckhand and take-permit holder on one vessel (35 days) 
+      - Mates (2) to operate and run both vessels (70 days) 
+      - Fish & Wildlife Technician (1)  to act as deckhand on second vessel (35 days)
+      - Fish & Wildlife Scientific Aids (2 per vessel) tagging  (140 hours @ \$15.35/hour)
+      
+  (2) Equipment
+      - One 36-40 ft low draft and low windage power catamaran tagging vessels outfitted with tagging cradles and necessary gear ~\$500,000
+      - Sufficient supply of disc tags for two vessels tagging ~35 days 
+      - \$11,000 to lease two (2) trucks for 1 year (including \$2,000 fuel estimates)
+      - Sufficient supply of gill net panels, either purchased or CDFW fabricated ~\$5,000
+  
+  (3) Total Estimate Using 2019-2020 Salaries and Cost Estimates 
+      - Personnel: $78,000 for (1) ES-Range C, (2) Mates, (1) F&W Tech, and (4) F&W Scientific Aids working 35 days
+      - Vehicles: \$511,000. One 36-40 ft tagging vessels @ \$500,000. \$11,000 for leasing (2) trucks plus fuel
+      - Nets and Tags: \$9,000. \$4,000 for disc tags (4,800 tags-Floy 2020 Quote). \$5,000 rough estimate for gill nets
+      - General Expenses and Training: \$3,000 
+      - Direct Cost Recovery (Overhead): \$30,000. DWR @ 24.32% and USBR @ 27.16% 
+
+      **Total Estimate**: \$631,000
+
+*Note*: The proposed 36-40 ft vessel is versatile and can be used for other IEP surveys (e.g., sturgeon mark-recapture; sturgeon longline; Fall Midwater Trawl; Summer Townet; Smelt Larval Surve; Spring Kodial Trawl). The 28 ft class vessel for Striped Bass fyke trap operations could be used as a substitute if needed, but then fyke trap and gill net operations could not run simultaneously, as historically was the case.
+
+- **Electrofishing**: use two available Smith-Root electrofishing boats (e-boats) to sample in absence (or in addtion to) gill net operations. We recommend a pilot study (at first) to assess logistics and catch-per-unit effort. Sampling could eventually include diet study (through gastric lavage) and (or) habitat study components. Such data could improve our understanding about predation on ESA-listed species. *Note*: Our e-boats have been in service for at least 25 years. One --- but possibly both --- would require upgrades totalling ~\$5,000-\$10,000 per boat. Staffing per vessel requires one Vessel Mate and two science staff (e.g., Envirnomental Scientist or Scientific Aid + Fish & Wildlife Tech).
+
+<!-- - should expand to include February, what about June -->
+
+- **Creel Census**: reinstate the Striped Bass Creel Census. Data collected from Region 3's Creel Census integrally combined with fyke trap and gill net data to estimate abundance. The Department's Fisheries Branch conducts the Central Valley Angler Survey (CVAS) July through December. Though focused on salmon, the CVAS does encounter Striped Bass and such data likely could be used in absence of Region 3's Creel Census. However, to cover year-round (i.e., January through June), we supply the following approximated estimate.
+
+  (1) Personnel
+      - One Field Lead (Fish & Wildlife Tech or Vessel Mate) ~120 days @ various rates  
+      - Four Fish & Wildlife Scientific Aids for ~480 days @ \$15.35 hour 
+  (2) Equipment
+      - Two leased vehicles to transport crew to landings and marinas (if access surveys only)
+      - (Optional) 1-2 small vessels if roving vessel surveys are desired. Could potentially use R/V *Warmouth*. Cost not factored in to estimate.
+  (3) Total Estimate Using 2019-2020 Salaries and Cost Estimates 
+      - Personnel: \$160,000 for 6 months for (1) Mate and (4) Scientific Aids working full-time
+      - Vehicles: \$11,000 for leasing (2) trucks for 1 year and fuel estimate of ~\$2,000
+      - General Expenses & Training: \$3,000
+      - Direct Cost Recovery (Overhead): \$45,000; DWR @ 24.32% and USBR @ 27.16% 
+      
+    **Total Approximate Estimate**: \$219,000 (6-month period)
+
+#### Data
+
+- **Older Data**: enter into the current database older effort, bycatch, tallies of sub-legal fish, and recapture data. Resolve any "odd" data (e.g., fork length = 9) by reviewing hardcopy datasheets. Perform all proper QAQC checks. *Note*: in 2011, we made the switch from `dBase` to `Microsoft Access`. The `dBase` database configuration precluded entry of all data (e.g., bycatch; effort).
+
+<!-- - condition (measuring girth or weight) -->
+
+#### Analytics
+
+- **Sampling Locations**: understand effects of sampling location changes on catch-per-unit-effort, sex ratio, and growth rate (mean-length-at-age). This could guide recommendations for re-implementation of gill netting operations and (or) deployment of fyke traps in areas other than Knights Landing (*the* spot since 1990).
+
+- **Sub-legal Abundance Estimates**: assess the relevance of marking sub-legal sized Striped Bass. Use 2010-2019 data to estimate abundance (certainly relative and if possible absolute). Also, look at tag return data of this subset to check the feasibility of estimating "harvest" rate. <!-- count age-2 fish? -->
+
+- **Scale Samples**: assess the feasibility of aging a sub-sample of the decades-worth of un-aged scale samples. Complete the analysis we began a while ago for such assessment. The analysis should include annual growth rate estimates given available age-length data. If annual growth rate variance is not statistically significant, it may be possible to assign ages via an age-length key. Otherwise, we will need to assemble a team of preferably veteran scale readers. *Note*: we report age-sex stratified abundance estimates. So age assignment is (and has been) an important step in this process.
+
+- **Disc Tags**: assuming we continue with external (visible) tags, then we need to evaluate our current reward structure \$20-\$50-\$100. Ideally, we need a reward value high enough to achieve near-100% reporting. <!--Doing so improves the accuracy of adjusting the non-reward tag for non-reporting.-->
+
+- **Annual Sampling**: intuitively it might appear annual sampling is beneficial and needed, but currently we have not formally analyzed this notion. Kohlhorst unpublished -@sfra-2002 mentioned "analysis" suggesting sampling every other year was sufficient, but we have yet to find such analysis. It is important to understand if we gained anything (e.g., improved population metrics; better understanding of the fishery) by sampling annually.
+
+- **Population Estimator**: We are employing the analytical expertise of Dr. Jereme Gaeta to evaluate the sensitivity of our population estimator [Ricker -@ricker-1975, eqn. 3.9] to the number sampling events and the number of catches per year. Preliminary results suggest recruitment of strong age-3 year-class (the minimum age recruiting to our gear) can drastically reduce the accuracy of our population estimator. However, limiting the population estimate analysis to ages 4+ (i.e., marking age-3 individuals, but not including them in the analysis) may circumvent strong year-class events, results in vastly improved population estimates. These preliminary analysis are a promising step toward improving our population estimates and identifying the best sampling regime. Furthermore, we are working with Dr. Gaeta to evaluate additional metrics to assess the effects of sampling regime on our ability to describe the Striped Bass population. One example of an alternative metric we are exploring is the probability of recapture at age given varying sampling regimes. For example, how many events and captures per event are necessary throughout the life of a year-class for 10% individuals at age-9 to be recaptures? What about 25%?  Future efforts will confront theoretical models developed by Dr. Gaeta with existing CDFW data to help inform the best sampling regime moving forward.
+
+- **Program MARK**: assess the utility of this computer program. From old files, it appears biologists attempted to make use of Program Mark, well known to mark-recapture researchers. It is not clear if such attempts were fruitful. Despite this program's steep learning curve, we feel it is important to at least investigate possible employment of Program Mark on our mark-recapture data.
+
+#### Data Availability
+
+- **User-interface**: for nearly a decade now, Striped Bass mark-recapture data have been stored in a server-based database. We recommend developing a user interface to afford others (secure) access to our data in a format customed to their needs. We discourage the slap-happy practice of posting to an FTP or like website a stand-alone database copy or flatfile extracts.
+
+- **Metadata**: improve documentation, including protocols. Make such documentation readily available and establish a plan to maintain and update (as needed) such documentation.

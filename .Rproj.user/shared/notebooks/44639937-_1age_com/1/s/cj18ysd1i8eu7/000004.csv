@@ -1,0 +1,11 @@
+"0",""
+"0","# to categorize each length as sub-legal, legal, or unk"
+"0","Tagging$StripedBass$LenCat <- LengthGroup("
+"0","  data = Tagging[[""StripedBass""]],"
+"0","  year = RelYear,"
+"0","  fl = RelFL,"
+"0","  regTable = ""sb"""
+"0",")"
+"2","Error in eval(expr = substitute(year), envir = data) : 
+  object 'RelYear' not found
+"

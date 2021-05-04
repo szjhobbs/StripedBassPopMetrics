@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1599003329059.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1642708374",
+    "id" : "458191E6",
+    "lastKnownWriteTime" : 1599003283,
+    "last_content_update" : 1614987734633,
+    "path" : "C:/Users/JaHobbs/OneDrive - California Department of Fish and Wildlife/SportFish/0_RProjects/StripedBassPopMetrics/abundance/abundance.Rmd",
+    "project_path" : "abundance.Rmd",
+    "properties" : {
+        "cursorPosition" : "72,0",
+        "last_setup_crc32" : "FAD73115ab693945",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

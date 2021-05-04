@@ -1,0 +1,1121 @@
+---
+output:
+   github_document: default
+   html_document: default
+   word_document: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(
+  root.dir = "~/RProjects/StripedBassPopMetrics/",
+  global.par = TRUE
+)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+now <- Sys.Date()
+
+```
+
+```{r global-par}
+
+par(
+  # bg = "white",
+  # fg = "black",
+  # col = "grey70",
+  # mar: c(bottom, left, top, right)
+  # mar = c(4, 4, 1, 1) + 0.1
+  # mar = c(5, 6, 1, 1),
+  # cex.axis = 1.5,
+  # cex.lab = 1.5,
+  col.axis = "grey40",
+  col.lab = "black",
+  # las = 1,
+  bty = "n",
+  mgp = c(3, 0.75, 0),
+  tcl = -0.3,
+  lend = 1
+)
+
+```
+
+```{r load-libraries}
+
+# sportfish currently available on GitHub
+library(sportfish)
+library(XML) # for downloading CDEC data
+
+```
+
+```{r load-data, results='hide'}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+Tagging <- new.env()
+ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+# clean up
+rm(data_dir)
+
+```
+
+```{r variables}
+
+# Here we create some variables we'll use throughout this process. We create
+# them here and now for convenience.
+
+# for current-year analytics
+year <- 2019
+
+# for analytics by week
+Tagging[["StripedBass"]] <- within(data = Tagging[["StripedBass"]], expr = {
+  Week <- format(RelDate, format = "%U")
+})
+
+```
+
+```{r cdec}
+
+# for now will include this herein; in the future will develop package to house
+# this & dayflow code (J. DuBois, 10-Oct-2019)
+
+# beginning url to query Knights Landing data
+main_url <- "http://cdec.water.ca.gov/cgi-progs/selectQuery?"
+
+# set start & end dates from tagging effort data
+date_range <- with(data = Tagging[["Effort"]], expr = {
+  b <- RelYear %in% year
+  range(as.Date(RelDate[b]))
+})
+
+# elements of the query url (i.e., to the right of the '?')
+station_id <- "Stations=KNL" # KNL = Knights Landing
+sensor_num <- "SensorNums=1"
+dur_code <- "dur_code=E"
+
+# start & end date based on field dates; time added to ensure getting all stage
+# data for that date (s/b n=96, as readings are done every 1/4 hour); date +/-
+# some padding - can change as necessary
+start_date <- paste0("Start=", date_range[1] - 2, " 00:00")
+end_date <- paste0("End=", date_range[2] + 3, " 23:45")
+
+# can hard code dates as an option
+# start_date <- "start_date=04/01/2016"
+# end_date <- "end_date=05/31/2016"
+
+# combine elements of query url
+url_query <- paste(
+  station_id,
+  sensor_num,
+  dur_code,
+  start_date,
+  end_date,
+  sep = "&"
+)
+
+# example url
+# http://cdec.water.ca.gov/dynamicapp/selectQuery?
+# Stations=KNL&SensorNums=1&dur_code=E&Start=2019-10-09&End=2019-10-10
+
+# get HTML from complete url
+knl_stage_html <- htmlParse(file = paste0(main_url, url_query))
+
+# read only the tables from the parsed HTML
+knl_stage_tables <- getNodeSet(doc = knl_stage_html, path = "//table")
+
+# as of now (02-Jun-2016) the first table is the river stage table
+stage_table <- readHTMLTable(doc = knl_stage_tables[[1]])
+
+# re-assign stage_table to cleaned-up version
+stage_table <- data.frame(
+  Date = as.Date(
+    as.character(stage_table[, 1]),
+    format = "%m/%d/%Y %H:%M"
+  ),
+  # DateTime = as.POSIXct(
+  #   as.character(stage_table[, 1]),
+  #   format = "%m/%d/%Y %H:%M"
+  # ),
+  Stage = as.numeric(as.character(stage_table[, 2])),
+  stringsAsFactors = FALSE
+)
+
+# section cleanup
+rm(
+  main_url, station_id, sensor_num,
+  dur_code, start_date, end_date,
+  url_query, knl_stage_html, knl_stage_tables
+)
+
+```
+
+## Introduction
+
+An adult Striped Bass population study conducted by the California Department of Fish and Wildlife has been ongoing since 1969. Part of the study is a “high-value” reward tagging program. Presented here is a summary of the `r year` Striped Bass-tagging field season.
+
+The tagging program is designed to understand and monitor the population dynamics of Striped Bass, with the ultimate goal being to provide the tools to inform science-based resource management decisions. These tools include relative and absolute abundance, harvest rate, mortality rate, individual growth rates, and large-scale movement and (or) migration patterns.
+
+Our objective during the field season was to capture, tag, measure, sex, and release in good condition as many Striped Bass as possible and to document previously-tagged Striped Bass. We also enumerated all by-catch (i.e., fish other than Striped Bass), recording approximated length, coloration, condition, and adipose fin (presence or absence) for salmonids.
+
+<!--
+## Methods and Gear
+
+The crew (Appendix 1) typically included an Environmental Scientist, two Fish and Wildlife Technicians, and a Mate. Tagging was performed per procedure outlined in Appendix 2 of the Sacramento-San Joaquin Sport Fish Management Striped Bass Population Study Quality Control and Operating Manual.
+
+Up to nine cylindrical fyke traps (length 20'; diameter 10'; 9 gauge 2¼-inch mesh) were fished in the Sacramento River near Knights Landing (see photo at right of a
+fyke trap). Four traps were placed on the east riverbank about two miles upstream of the Knights Landing Bridge (Highway 113). Four traps were placed on the east riverbank about one mile downstream of the Knights Landing Bridge.Traps were placed
+upwards of 250 feet apart from each other and were secured to temporary (i.e., for the season) moorings on the levee terrace.
+
+Traps were completely submerged while fishing (collecting fish). Striped Bass and other fishes swam through the two openings (marked in photo above) and accumulated in the front (cone) of the trap. To remove fish from a trap, the trap was rolled up the riverbank until one of the doors was positioned to allow relatively easy access from the *Kayot* (~20-foot pontoon boat) while ensuring the trap remained in enough water to minimize fish stress.
+
+An electric winch was used to roll traps up and down the riverbank. When the trap and boat were in position, fish were netted from the trap and processed on board the *Kayot*.
+
+...continues Striped Bass were measured to
+
+-->
+
+## Annual & Daily Summary
+
+Herein we summarize `r year` effort and catch. We use both to calculate catch-per-unit-effort (CPUE).
+
+### Effort
+
+```{r effort}
+
+effort <- Split(
+  data = Tagging[["Effort"]],
+  subset = RelYear %in% year,
+  vars = c(StartTime, EndTime, DriftTrap),
+  splitVars = RelDate
+)
+
+effort$Summary <- t(vapply(effort[["Data"]], FUN = function(x, ...) {
+  e <- EffortSb(data = x, ...)
+  unlist(e[c("Hours", "HoursAvg", "HoursVar", "NetSets")])
+}, FUN.VALUE = numeric(4L), StartTime, EndTime, DriftTrap, USE.NAMES = TRUE))
+
+# for proper class type
+effort$RelDate <- as.Date(effort[["RelDate"]])
+
+```
+
+```{r effort-summary}
+
+range_sampled <- range(effort[["RelDate"]])
+range_sample_print <- paste(
+  format(date_range, format = "%d-%b"),
+  collapse = " and "
+)
+
+days_sampled <- nrow(effort)
+traps_fished_total <- sum(effort[["Summary"]][, "NetSets"])
+hours_total <- sum(effort[["Summary"]][, "Hours"])
+
+# for overall season's summary
+columns <- c("Hours", "HoursAvg", "NetSets")
+
+season_stats <- vapply(columns, FUN = function(x) {
+  unlist(DescStat(effort[["Summary"]][, x]))
+}, FUN.VALUE = numeric(7L))
+
+```
+
+In `r year`, we deployed fyke traps `r days_sampled` days between `r range_sample_print`. Most days we fished up to `r season_stats["Max", "NetSets"]` traps, with season totals of `r traps_fished_total` traps fished over ~`r hours_total %/% 1` hours.
+
+**Note**: On 15-May, we checked all 9 traps but did not handle any fish. Catch was markedly low this day, and we did not observe any ESA species. Inadvertently, we forgot to record the pull time for each trap. Thus, effort and catch "rolled" into the next tagging day (16-May).
+
+### Catch
+
+```{r catch-daily}
+
+catch_daily <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear %in% year,
+  vars = c(DriftTrap, TagAction, Count),
+  splitVars = RelDate
+)
+
+catch_daily$Daily <- t(vapply(catch_daily[["Data"]], FUN = function(x) {
+  b <- x[["TagAction"]] %in% "1"
+  c(Total = sum(x[["Count"]]), Tagged = sum(x[b, "Count"]))
+}, FUN.VALUE = numeric(2L), USE.NAMES = TRUE))
+
+catch_daily$DailyTrap <- lapply(catch_daily[["Data"]], FUN = function(x) {
+  s <- Split(data = x, splitVars = DriftTrap)
+  out <- vapply(s[["Data"]], FUN = function(y) {
+    b <- y[["TagAction"]] %in% "1"
+    c(Total = sum(y[["Count"]]), Tagged = sum(y[b, "Count"]))
+  }, FUN.VALUE = numeric(2L), USE.NAMES = TRUE)
+  t(out)
+})
+
+catch_daily$TrapsTended <- vapply(
+  catch_daily[["DailyTrap"]],
+  FUN = nrow,
+  FUN.VALUE = numeric(1L),
+  USE.NAMES = FALSE
+)
+
+```
+
+```{r catch-summaries}
+
+catch_totals <- colSums(catch_daily[["Daily"]])
+
+traps_tended <- sum(catch_daily[["TrapsTended"]])
+range_traps_tended <- paste0(
+  range(catch_daily[["TrapsTended"]]),
+  collapse = " and "
+)
+
+daily_mma <- vapply(
+  data.frame(catch_daily[["Daily"]]),
+  FUN = function(x) unlist(DescStat(x)),
+  FUN.VALUE = numeric(7L)
+)[c("Min", "Max", "Avg"), ]
+
+daily_trap_mma <- vapply(
+  data.frame(do.call(
+    what = rbind,
+    args = catch_daily[["DailyTrap"]]
+  )),
+  FUN = function(x) unlist(DescStat(x)),
+  FUN.VALUE = numeric(7L)
+)[c("Min", "Max", "Avg"), ]
+
+```
+
+This season we tended between `r range_traps_tended` traps each day (exception noted above), totaling `r traps_tended`. We caught `r catch_totals["Total"]` Striped Bass, of which `r catch_totals["Tagged"]` were then disc tagged. Daily (d) and daily per trap (d/t) totals and tagged (min, max, & average) are displayed below.
+
+```{r daily-trap}
+
+knitr::kable(
+  cbind(
+    daily_mma,
+    daily_trap_mma
+  ),
+  format = "markdown",
+  col.names = c(
+    "Total (d) ", "Tagged (d)",
+    "Total (d/t)", "Tagged (d/t)"
+  ),
+  digits = 0
+)
+
+```
+
+## Recaptures
+
+```{r recaps}
+
+recaps <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear %in% year & TagAction %in% '2',
+  vars = c(RelDate, RelFL, RelSex),
+  splitVars = TagNum
+)
+
+recaps$RelData <- with(data = Tagging[["StripedBass"]], expr = {
+  
+  lapply(recaps[["TagNum"]], FUN = function(x) {
+    
+    b <- TagNum %in% x &
+      (is.na(TagAction) | TagAction %in% '1')
+    
+    data.frame(
+      TagDate = RelDate[b],
+      TagFL = RelFL[b],
+      TagSex = RelSex[b]
+    )
+  })
+})
+
+recaps$Summary <- Map(f = function(x, y) {
+  
+  dal <- difftime(
+    time1 = x[["RelDate"]],
+    time2 = y[["TagDate"]],
+    units = "days"
+  )
+  
+  dal <- as.numeric(dal)
+  
+  gpy <- NA
+  
+  if (dal >= 31)
+    gpy <- (x[["RelFL"]] - y[["TagFL"]]) / (dal / 365.25)
+  
+  data.frame(
+    DateRec = x[["RelDate"]],
+    DateTag = y[["TagDate"]],
+    DAL = dal,
+    LenTag = y[["TagFL"]],
+    LenRec = x[["RelFL"]],
+    GPY = gpy
+  )
+  
+}, recaps[["Data"]], recaps[["RelData"]])
+
+recaps$rel_years <- vapply(recaps[["Summary"]], FUN = function(x) {
+  as.numeric(format(x[["DateTag"]], format = "%Y"))
+}, FUN.VALUE = numeric(1L), USE.NAMES = FALSE)
+
+```
+
+```{r rec-rel-years}
+
+rec_rel_years <- table(recaps[["rel_years"]], useNA = "ifany", dnn = NULL)
+
+num_rel_years <- length(rec_rel_years)
+
+```
+
+We had `r nrow(recaps)` recaptures this season from `r num_rel_years` different tagging (release) years. Most were within season (i.e., released & recaptured the same year; for `r year` n=`r rec_rel_years[as.character(year)]`).
+
+Below we display all recaptured tags in `r year`. For recaptures from previous years, we calculated growth per year (`GPY`) where possible. We show `DateRec` (date recaptured, all year `r year`), `DateTag` (date tag released), `DAL` (days at large between release-recapture), and length when tagged and when recaptured (`LenTag` & `LenRec`).
+
+**Note**: For within season recaptures, any discrepancies between `LenTag` and `LenRec` are due to inadvertent measuring and (or) recording errors.
+
+**Note**: We recaptured five (5) Striped Bass on the same day each was tagged (not shown in table below). 
+
+```{r recaps-display}
+
+recaps_display <- data.frame(
+  TagNum = recaps[["TagNum"]],
+  do.call(what = rbind, args = recaps[["Summary"]]),
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+recaps_display$DateRec <- format(
+  recaps_display[["DateRec"]],
+  format = "%m-%d"
+)
+
+# for ordering output by days at large (DAL)
+rows <- order(recaps_display[["DAL"]], decreasing = TRUE)
+
+knitr::kable(
+  recaps_display[rows, ],
+  format = "markdown",
+  digits = 2,
+  row.names = FALSE
+)
+
+```
+
+## Catch per Trap Hour
+
+```{r cpue}
+
+# for effort & catch matching
+i <- match(effort[["RelDate"]], table = as.Date(catch_daily[["RelDate"]]))
+
+# to calculate catch per trap hour
+cpue <- catch_daily[["Daily"]][i , "Total"] / effort[["Summary"]][, "Hours"]
+
+cpue_desc_stat <- DescStat(cpue)
+
+```
+
+```{r river-stage}
+
+# because we want to plot daily cpue as it compares to daily river stage
+river_stage <- Split(stage_table, vars = Stage, splitVars = Date)
+
+# because we'll plot daily average stage
+rs_desc_stats <- vapply(river_stage[["Data"]], FUN = function(x) {
+  unlist(DescStat(x[["Stage"]]))
+}, FUN.VALUE = numeric(7L))
+
+```
+
+```{r water-temp}
+
+# because water temp is in its own dataframe, we simply can extract the daily
+# values for the year in question
+water_temp <- with(data = Tagging[["Environmentals"]], expr = {
+  
+  y <- as.numeric(format(RelDate, format = "%Y"))
+  b <- y %in% year
+  
+  temp <- WaterTemp[b]
+  
+  temp_avg_c <- mean(temp, na.rm = TRUE)
+  
+  list(
+    dates = RelDate[b],
+    values = temp,
+    range_values = range(temp, na.rm = TRUE),
+    temp_avg_c = temp_avg_c,
+    temp_avg_f = temp_avg_c * 9/5 + 32
+  )
+})
+
+```
+
+```{r plot-list}
+
+# chunk creates an index (ind) for proper record matching (by date) with water &
+# cpue datasets to river stage dataset; plus it creates a list used in the next
+# chunk for ease of plotting 3 stacked plots using same x-axis (date)
+
+# for proper matching with river stage data
+ind <- lapply(
+  list(i_cpue = names(cpue), i_water = water_temp[["dates"]]),
+  FUN = function(table, x) {
+    if (!is.character(table)) table <- as.character(table)
+    match(x, table = table)
+  },
+  x = river_stage[["Date"]]
+)
+
+# for stack plot river stage, water temp, & cpue (used in lapply() below)
+plot_list <- list(
+  river = list(
+    vals = rs_desc_stats["Avg", ],
+    type = "l",
+    col = "steelblue",
+    cex = 1,
+    lwd = 3,
+    ylab = "River stage (ft)"
+  ),
+  wtemp = list(
+    vals = water_temp[["values"]][ind[["i_water"]]],
+    type = "p",
+    col = "black",
+    cex = 1.5,
+    lwd = 1,
+    ylab = "Water temp (C)"
+  ),
+  cpue = list(
+    vals = cpue[ind[["i_cpue"]]],
+    type = "h",
+    col = "black",
+    cex = 1,
+    lwd = 10,
+    ylab = "Catch / trap-hour"
+  )
+)
+# end plot_list
+
+# section clean up
+rm(ind)
+
+```
+
+Daily average river stage for the Knights Landing-portion of the Sacramento River was calculated from quarter-hourly readings (n=96/day) posted on-line at the California Data Exchange Center’s website. River stage declined a bit early May, but mid-May rains maintained levels between ~25 and 28 feet for the season's duration (Figure below – top panel).
+
+Water temperature was recorded by the field crew at the beginning of each tagging day. Average water temperature was `r round(water_temp[["temp_avg_c"]], digits = 1)` degrees Celsius (°C, or ~`r round(water_temp[["temp_avg_f"]], digits = 1)` degrees Fahrenheit) for the tagging season (Figure below – middle panel).
+
+Striped Bass catch per trap-hour by day was calculated and plotted with river stage and water temperature. Average catch per trap-hour for the tagging season was ~`r round(cpue_desc_stat[["Avg"]], digits = 1)` fish (Figure below – bottom panel; average denoted with orange dashed line).
+
+```{r plot-cpue, fig.height=8, fig.width=6}
+
+# for stacked plot
+mat_layout <- matrix(data = 1:3, nrow = 3, ncol = 1, byrow = TRUE)
+nf <- layout(mat = mat_layout)
+# layout.show(n = nf)
+
+# for keeping bottom & left spaces to display axes title
+# par(oma = c(4, 5, 1, 1), cex.axis = 1.5, family = "sans")
+par(
+  oma = c(4, 1, 0.5, 1),
+  cex.axis = 1.05,
+  cex.axis = 1.5,
+  cex.lab = 1.5,
+  tcl = -0.3
+)
+
+plot_cpue <- vapply(plot_list, FUN = function(y, x) {
+  
+  par(mar = c(0.1, 4, 1.0, 0.1), mgp = c(2.5, 0.6, 0))
+  
+  x <- as.Date(x)
+  
+  rx <- range(x)
+  ry <- range(y[["vals"]], na.rm = TRUE)
+  
+  if (y[["type"]] == 'h') ry[1] <- 0
+  
+  plot(
+    x = rx + c(1, -1),
+    y = ry,
+    type = "n",
+    xaxt = "n",
+    yaxt = "n",
+    las = 1,
+    xlab = NA,
+    ylab = y[["ylab"]]
+  )
+  
+  par(xaxp = c(rx, diff(rx)))
+  grid(lwd = 1000, col = "grey90")
+  grid(lty = 1, col = "white", lwd = 1)
+  
+  
+  if (y[["type"]] == 'h') {
+    avg <- mean(y[["vals"]], na.rm = TRUE)
+    abline(h = avg, lty = 2, lwd = 2, col = "orange2")
+  }
+  
+  points(
+    x = x,
+    y = y[["vals"]],
+    type = y[["type"]],
+    col = y[["col"]],
+    cex = y[["cex"]],
+    pch = 19,
+    lwd = y[["lwd"]],
+    lend = 1
+  )
+  
+  axis(
+    side = 2,
+    at = axTicks(side = 2),
+    labels = TRUE,
+    col = "transparent",
+    col.ticks = "grey30",
+    las = 1
+  )
+  
+  DescStat(y[["vals"]])
+}, FUN.VALUE = as.list(1:7), x = river_stage[["Date"]])
+
+x_at <- as.Date(river_stage[["Date"]])
+# x_lbls <- format(x_at, format = "%b\n%d")
+x_lbls <- format(x_at, format = "%d")
+
+bx_lbls <- seq_along(x_lbls) %% 7 == 1
+
+axis(
+  side = 1,
+  at = x_at[bx_lbls],
+  labels =  x_lbls[bx_lbls],
+  col = "transparent",
+  col.ticks = "grey30"
+  # padj = 0.7
+)
+
+mtext(text = "Date (May-Jun)", side = 1, line = 2)
+
+# to reset for more plotting below
+layout(mat = 1)
+
+```
+
+## Weekly Catch
+
+```{r catch-weekly}
+
+# for week totals
+catch_weekly <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear %in% year,
+  vars = c(RelDate, DriftTrap, TagAction, RelFL, Count),
+  splitVars = Week
+)
+
+# for proper ordering & naming given the 7 tagging action choices
+lvls <- setNames(
+    object = c(1, 7, 5, 6, 2, 3, 4),
+    nm = c(
+      "Tagged", "Creeled", "Over",
+      "Dead", "Recapture", "RecapTag",
+      "Sub-legal"
+    )
+  )
+
+# so that all 7 tagging action choices are included each week
+catch_weekly$TagAction <- t(
+  vapply(catch_weekly[["Data"]], FUN = function(x, l) {
+    
+    # for consistent levels each week
+    ta <- factor(
+      x[["TagAction"]],
+      levels = l,
+      labels = names(l)
+    )
+  
+    # total by tagging action
+    res <- aggregate(
+      x["Count"],
+      by = list(ta = ta),
+      FUN = sum,
+      na.rm = TRUE,
+      drop = FALSE
+    )
+    
+    # for desired output
+    out <- res[["Count"]]
+    out[is.na(out)] <- 0
+    names(out) <- res[["ta"]]
+    out
+  }, FUN.VALUE = numeric(7L), l = lvls)
+)
+
+# below for more summary outputs
+
+catch_weekly$TotalCatch <- rowSums(catch_weekly[["TagAction"]])
+  
+catch_weekly$TrapsTended <- vapply(catch_weekly[["Data"]], FUN = function(x) {
+  
+  trap <- aggregate(
+    formula = DriftTrap  ~ RelDate,
+    data = x,
+    FUN = function(x) length(unique(x))
+  )
+  
+  sum(trap[["DriftTrap"]])
+  
+}, FUN.VALUE = numeric(1L))
+
+catch_weekly$DaysFished <- vapply(catch_weekly[["Data"]], FUN = function(x) {
+  length(unique(x[["RelDate"]]))
+}, FUN.VALUE = numeric(1L))
+
+catch_weekly$LenStats <- t(
+  vapply(catch_weekly[["Data"]], FUN = function(x) {
+    DescStat(x[["RelFL"]])
+  }, FUN.VALUE = as.list(1:7))
+)
+
+```
+
+Below we display weekly numbers for total caught (and then parsed by tagging action: tagged; creeled; over; dead; recaptured), traps tended, and days fished. Despite a moderate week 1, we tagged many hundreds of Striped Bass each week.
+
+**Note**: Days fished does not include 15-May (week 2), as on that day we checked each trap but did not handle fish. In week 2, we fished 4 days.
+
+```{r catch-weekly-display}
+
+# catch_weekly$TagAction
+
+knitr::kable(
+  data.frame(
+    Week = seq_len(length.out = nrow(catch_weekly)),
+    Total = catch_weekly[["TotalCatch"]],
+    catch_weekly[["TagAction"]][, 1:5],
+    TrapsTended = catch_weekly[["TrapsTended"]],
+    DaysFished = catch_weekly[["DaysFished"]],
+    row.names = NULL
+  ),
+  format = "markdown"
+)
+
+```
+
+Below we display weekly length measurement stats. `N` denotes number of Striped Bass measured (includes both sexes). `Var` is the variance around the mean (`Avg`). We do not observe much week-to-week variation in mean fork length.
+
+```{r length-weekly-display}
+
+# chunk displays weekly length descriptive stats
+
+length_wk <- data.frame(
+  Week = seq_len(length.out = nrow(catch_weekly)),
+  catch_weekly[["LenStats"]][, -1],
+  row.names = NULL
+)
+
+# because each column in catch_weekly[["LenStats"]] is really a list & `digits`
+# in kable below won't work on a list
+length_wk[] <- lapply(length_wk, FUN = unlist)
+
+knitr::kable(
+  length_wk,
+  format = "markdown",
+  digits = 1
+)
+
+# some clean up
+rm(length_wk)
+
+```
+
+## Sex Ratio
+
+```{r sex-ratio}
+
+sex_len <- with(data = Tagging[["StripedBass"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  s <- lkp_striper$sex(s = RelSex[b], asFactor = TRUE)
+  
+  # so NAll in DescStat based on total count not number of records
+  s <- rep(s, times = Count[b])
+  fl <- rep(RelFL[b], times = Count[b])
+  
+  out <- aggregate(
+    fl,
+    by = list(s),
+    FUN = function(x) unlist(DescStat(x))
+  )
+
+  r <- c(SexRatio(s)[["Prop"]])
+
+  data.frame(Sex = out[[1]], Ratio = r, FL = out[[2]], row.names = NULL)
+})
+
+```
+
+Below we display the sex ratio along with fork length stats by sex. The ratio is skewed noticeably towards males (M). On average, females (F) were larger than males, but we observed much greater variance (`Var`) in female lengths than in male lengths. `NAll` is total catch and `N` is number measured. Sex `U` is unknown (i.e., not recorded).
+
+```{r sex-ratio-display}
+
+# for simplification of field names
+colnames(sex_len) <- sub(
+  pattern = "^FL.",
+  replacement = "",
+  x = colnames(sex_len)
+)
+
+knitr::kable(
+  sex_len,
+  format = "markdown",
+  digits = 3
+)
+
+```
+
+Below we display weekly length distributions by sex. Each point is one Striped Bass, and 'noise' has been added to reduce over-plotting. We note (1) some of the largest fish this season appeared in week 3 and (2) a more females were observed in the final week (5) than in each of the previous four.
+
+```{r plot-sex-week}
+
+# par(oma = c(4, 5, 1, 1))
+par(mar = c(5, 4, 1.0, 0.1))
+
+with(data = Tagging[["StripedBass"]], expr = {
+  
+  b <- RelYear %in% year
+  
+  wk <- as.numeric(Week)
+  
+  # for x-axis & grid lines
+  range_wk <- range(wk[b], na.rm = TRUE)
+  
+  # plotting variables
+  col_m <- rgb(red = 0, green = 0, blue = 0.3, alpha = 0.1)
+  col_f <- rgb(red = 0.3, green = 0, blue = 0, alpha = 0.2)
+  pp <- 20L
+  
+  # xlim widened to account for jitter
+  plot(
+    formula = RelFL ~ wk,
+    subset = b,
+    type = "n",
+    yaxt = "n",
+    xaxt = "n",
+    xlim = c(range_wk + c(-0.25, 0.25)),
+    xlab = "Week",
+    ylab = "Fork length (cm)"
+  )
+  
+  # to add grid lines & plot background
+  par(xaxp = c(range_wk, diff(range_wk)))
+  grid(lwd = 1000, col = "grey90")
+  grid(lty = 1, col = "white", lwd = 1)
+  
+  # add points for male
+  points(
+    formula = RelFL ~ jitter(wk - 0.15, factor = 0.5),
+    subset = b & RelSex %in% 1,
+    pch = pp,
+    col = col_m
+  )
+  
+  # add points for female
+  points(
+    formula = RelFL ~ jitter(wk + 0.15, factor = 0.5),
+    subset = b & RelSex %in% 2,
+    pch = pp,
+    col = col_f
+  )
+  
+  axis(
+    side = 1,
+    at = axTicks(side = 1),
+    labels = seq_along(along.with = axTicks(side = 1)),
+    col = "transparent",
+    col.ticks = "grey30",
+    las = 1
+  )
+  
+  axis(
+    side = 2,
+    at = axTicks(side = 2),
+    labels = TRUE,
+    col = "transparent",
+    col.ticks = "grey30",
+    las = 1
+  )
+  
+  # to distinguish between male & female points
+  legend(
+    x = range_wk[1],
+    y = max(RelFL[b], na.rm = TRUE) * 1.11,
+    legend = c("male", "female"),
+    col = c(col_m, col_f),
+    pch = pp,
+    bty = "n",
+    ncol = 2,
+    pt.cex = 2,
+    xpd = TRUE,
+    xjust = 0.4
+  )
+})
+
+```
+
+## Length Frequency
+
+```{r lf-annual}
+
+len_year <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = RelYear >= (year - 5),
+  vars = RelFL,
+  splitVars = RelYear
+)
+
+len_year$RangeFL <- t(
+  vapply(
+    len_year[["Data"]],
+    FUN = range,
+    FUN.VALUE = numeric(2L),
+    na.rm = TRUE
+  )
+)
+
+# a possiblity
+# vapply(len_year[["Data"]], FUN = function(x) {
+#   DescStat(x[["RelFL"]])
+# }, FUN.VALUE = as.list(1:7))
+
+len_year$FracSubs <- vapply(len_year[["Data"]], FUN = function(x, ...) {
+  mean(x[["RelFL"]] < 42, ...)
+}, FUN.VALUE = numeric(1L), na.rm = TRUE)
+
+len_year$lf <- lapply(len_year[["Data"]], FUN = function(x, ...) {
+  Frequency(x[["RelFL"]], ...)
+}, binWidth = 5, xRange = range(len_year[["RangeFL"]]))
+
+len_year$max_lf_dens <- vapply(len_year[["lf"]], FUN = function(lf) {
+  max(lf[["density"]])
+}, FUN.VALUE = numeric(1L))
+
+```
+
+```{r lf-annual-stats}
+
+len_stats_current_year <- unlist(len_year$lf[[as.character(year)]]$xstats())
+
+len_range <- paste0(
+  len_stats_current_year[c("Min", "Max")],
+  collapse = "-"
+)
+
+len_avg <- sprintf(
+  fmt = "%.1f ± %.1f cm FL (± SD)",
+  len_stats_current_year["Avg"],
+  sqrt(len_stats_current_year["Var"])
+)
+
+annual_frac_subs <- sprintf(
+  fmt = "%.3f (%s)",
+  len_year[["FracSubs"]],
+  len_year[["RelYear"]]
+)
+
+annual_frac_subs <- paste0(annual_frac_subs, collapse = "; ")
+
+```
+
+Of the fish for which a length measurement was recorded (n=`r len_stats_current_year[["N"]]`), length ranged `r len_range` cm FL and averaged `r len_avg`. Below we display annual length frequency distributions from `r year - 4` to `r year`. The vertical dashed line (orange) denotes median length. Length bins are 5 cm, and all bars left of bin 42 denote sub-legal sized fish. The fraction of sub-legal sized fish has varied annually: `r annual_frac_subs`.
+
+```{r plot-len-freq, fig.height=8, fig.width=6}
+
+# for stacked plot
+mat_layout <- matrix(data = 1:5, nrow = 5, ncol = 1, byrow = TRUE)
+nf <- layout(mat = mat_layout)
+# layout.show(n = nf)
+
+# for keeping bottom & left spaces to display axes title
+# par(oma = c(4, 5, 1, 1), cex.axis = 1.5, family = "sans")
+par(
+  oma = c(4, 1, 0.5, 1),
+  cex.axis = 1.05,
+  cex.axis = 1.5,
+  cex.lab = 1.5,
+  tcl = -0.3
+)
+
+# for max value on all y-axes
+dens <- max(len_year[["max_lf_dens"]])
+
+plot_lf <- Map(f = function(lf, d, y) {
+  
+  par(mar = c(0.1, 4, 1.0, 0.1), mgp = c(2.5, 0.6, 0))
+  
+  # for sample size
+  nn <- lf$xstats()[["N"]]
+  
+  # create density plot
+  res <- plot(
+    lf,
+    maxY = d,
+    xTL = FALSE,
+    xTitle = FALSE,
+    yTitle = FALSE,
+    addN = FALSE
+  )
+  
+  # for labeling each plot with sample size & year
+  mtext(
+    text = bquote(expr = {n == .(nn) ~ "|" ~ year ~ .(y)}),
+    side = 3,
+    line = 0,
+    adj = 1,
+    cex = 0.7,
+    col = "grey30"
+  )
+  
+  # output eases plotting y-axis title
+  res
+  
+}, len_year[["lf"]], dens, len_year[["RelYear"]])
+
+# for completing axis tick labeling & titles
+x_tick_lbls <- len_year[["lf"]][[(as.character(year))]][["breaks"]]
+y_axis_title <- plot_lf[[as.character(year)]]$AxisTitle(var = "Density")
+
+# add x-axis tick labels & title
+axis(
+  side = 1,
+  at = x_tick_lbls,
+  labels = x_tick_lbls,
+  tcl = -0.3,
+  col = "transparent",
+  col.ticks = "grey30"
+)
+
+mtext(text = "Length bins (cm FL)", side = 1, line = 1.75)
+
+# reset to one plot then add y-axis title
+layout(mat = 1)
+mtext(text = y_axis_title, side = 2, line = 3)
+
+```
+
+
+## ByCatch
+
+```{r by-catch}
+
+# head(Tagging$ByCatch)
+
+# total counts for annual bycatch
+bycatch <- aggregate(
+  formula = Count ~ SpeciesCode,
+  data = Tagging[["ByCatch"]],
+  FUN = sum,
+  subset = RelYear %in% year,
+  na.action = na.omit
+)
+
+bycatch$Frac <- prop.table(bycatch[["Count"]])
+largest_frac <- which.max(bycatch[["Frac"]])
+
+largest_frac_display <- sprintf(
+  fmt = "%s (%.3f)", 
+  bycatch[largest_frac, "SpeciesCode"],
+  bycatch[largest_frac, "Frac"]
+)
+
+# stats for chinook salmon
+chinook <- with(data = Tagging[["ByCatch"]], expr = {
+  
+  b <- RelYear %in% year & SpeciesCode %in% "KS"
+  
+  list(
+    ChinookTotal = sum(b), 
+    CondColor = table(Condition[b], Coloration[b], useNA = "ifany", dnn = NULL),
+    AdFin = c(Yes = sum(HasAdFin[b]), No = sum(!HasAdFin[b])),
+    LengthRange = range(FL[b], na.rm = TRUE)
+  )
+})
+
+```
+
+We caught `r nrow(bycatch)` different species this season. By far the largest fraction was `r largest_frac_display`. We caught `r chinook[["ChinookTotal"]]` Chinook Salmon with approximated lengths between `r paste0(chinook[["LengthRange"]], collapse = " and ")`. All salmon were released alive, most in excellent condition. Below are seasonal (`r year`) by-catch totals.
+
+**Note**: The one White Sturgeon (WST) was caught 17-May and measured ~139 cm FL.
+
+```{r bycatch-display}
+
+knitr::kable(bycatch[1:2], format = "markdown")
+
+```
+
+## Tag Sequence
+
+```{r tag-seq}
+
+# with(data = Tagging[["StripedBass"]], expr = {
+#   b <- (TagAction %in% '1' | is.na(TagAction)) &
+#     !is.na(TagNum)
+#   table(TagValue[b], useNA = "ifany")
+# })
+
+# split by tag value to get sequence per each denomination (reward or
+# non-reward)
+tag_seq <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = (TagAction %in% '1' | is.na(TagAction)) &
+    !is.na(TagNum) & RelYear %in% year,
+  vars = TagNum,
+  splitVars = TagValue
+)
+
+tag_seq$Seq <- lapply(tag_seq[["Data"]], FUN = TagSequence, tags = TagNum)
+
+tag_seq$SeqNRow <- vapply(tag_seq[["Seq"]], FUN = nrow, FUN.VALUE = numeric(1L))
+
+# ordering for display purposes
+tag_seq$TagValue <- factor(
+  tag_seq[["TagValue"]],
+  levels = c("NR", "20", "50", "100"),
+  labels = c("NR", "$20", "$50", "$100")
+)
+
+tag_seq <- tag_seq[order(tag_seq[["TagValue"]]),]
+
+# to make dataframe for table display
+tag_seq_display <- with(data = tag_seq, expr = {
+  
+  out <- data.frame(
+    TagValue = rep(TagValue, times = SeqNRow),
+    do.call(what = rbind, args = Seq),
+    row.names = NULL
+  )
+  
+  # for cleaner output
+  out[] <- lapply(out, FUN = unlist)
+  
+  out
+})
+
+```
+
+Below we display the sequence of tags (by value) and count (`N`) released this season (`r year`). `NR` denotes non-reward. Roughly about 10% of tags released are reward tags.
+
+```{r tag-seq-display}
+
+knitr::kable(tag_seq_display, format = "markdown")
+
+```
+
+---
+
+CDFW, SportFish Unit    
+`r Sys.Date()`

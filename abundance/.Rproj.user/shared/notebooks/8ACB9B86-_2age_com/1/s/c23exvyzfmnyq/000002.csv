@@ -1,0 +1,7 @@
+"0",""
+"0","# counts number of records by creel type"
+"0","creel$RecCountType <- t(vapply(creel[[""Data""]], FUN = function(d) {"
+"0","  type <- factor(d[[""Type""]], levels = c(""bay"", ""rvr""))"
+"0","  table(type)"
+"0","}, FUN.VALUE = numeric(2L)))"
+"0",""

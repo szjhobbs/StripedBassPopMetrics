@@ -1,0 +1,158 @@
+---
+
+---
+
+<!-- Program Element Historical Details -->
+
+```{r setup3, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Study Design & Objective
+
+To collect Striped Bass, the CDFW deploys fyke traps and gill nets during peak spawning (Mar-Jul, more typically Apr-May). Fyke traps are set along the banks of the upper Sacramento River (e.g., Knights Landing), and gill nets are deployed typically at the confluence of the Sacramento and San Joaquin rivers. For both gear types, time set and time pulled are recorded per each deployment.
+
+To most legal-sized Striped Bass, one disc tag is affixed just below the dorsal fin's spiny section (typically between spines 3 and 4). Up to 10 scales are collected per fish for later age assessment. Fish are measured and sexed, and then released to the area nearest capture. Fish not tagged are enumerated and as time allows measured and (or) sexed. Recaptures (i.e., Striped Bass previously disc tagged) are recorded, noting length, sex, and tag number. Bycatch are identified to species and enumerated. 
+
+<!-- Noted too is any evidence of a captured Striped Bass having shed a disc tag and (or) if it needed to be re-tagged. -->
+
+<!-- *Note*: disc tags are sequentially numbered with a 6-character alpha-numeric (i.e., the tag number; e.g., C01234 [\$] or 299999 [no \$]). -->
+
+Currently, fyke traps fish 24 hours between inspections. We typically set fyke traps on Monday and handle and tag Striped Bass Tuesday through Friday. Field days typically begin at 0730 ending around 1730, varying according to catch and processing.
+
+We record the following information for each fyke trap. Further, we note any unusual procedures (e.g., trap vandalism; debris load). We record water temperature (to nearest 0.5 degree Celsius) once at the start of each field day.
+
+- trap number
+- daily set & pull times
+- bycatch (other species)
+- pinnipeds (seals or sea lions) in or within 50 meters of the trap
+
+We record the following information for each gill net set. Further, we note any unusual procedures (e.g., snags; other vessel interactions). We record water temperature (to nearest 0.5 degree Celsius) once at the start of each field day.
+
+- set number
+- amount of net fished
+- net set & net pull times
+- location fished
+- bycatch (other species)^[1]
+- pinnipeds (seals or sea lions) in or within 50 meters of the trap^[1]
+- pinnipeds raiding the net (i.e., picking fish from the net)^[1]
+
+[1]: within the "remarks" section of the daily summary datasheet
+
+On the tagging datasheet (same for both fyke trap and gill net), we record the following information. A datasheet has space for 25 tags.
+
+- header: date, location, capture method (fyke or gill net), tagger name
+- tag number (two numbers if double-tagging study)
+- fork length (cm)
+- sex (&male; = 1, &female; = 2)
+- tag description (i.e., tag value)
+- condition upon release (good = 1, 2 otherwise)
+- trap or set number (in "remarks" section)
+
+## Sampling Methods
+
+We (CDFW) use gill nets and fyke traps to catch mostly adult Striped Bass. Sampling occurs during the spawning run (Mar-Jul, more typcially Apr-May). We deploy gill nets daily mostly in or around the Sacramento-San Joaquin confluence. We deploy fyke traps along select stretches of the Sacramento River.
+
+The objective is to catch and then disc tag as many Striped Bass as possible. We use the current legal size as the cutoff for fish receiving a tag. Fish less than such length are enumerated, and then measured and (or) sexed as time allows.
+
+Striped Bass deemed "taggable" receive a single disc tag just below the dorsal fin on the right side. Disc tags are sequentially numbered with a 6-character alpha-numeric (i.e., the tag number). Along with tag number, fork length (in centimeters [cm]), mesh size(?), fish condition at release (good; fair; poor), set or trap number are recorded. Noted too is any evidence of a captured fish having shed a disc tag and (or) if a captured fish needed to be re-tagged.
+
+Fyke trap sampling typically occurs Tuesday through Friday from roughly dawn until late afternoon. Traps are deployed on Monday to begin fishing, and thus no fish are handled. Using wire, cable, and rope, fyke traps are set in fixed positions on the levee. Traps are deployed to the water using a winch and pull cable. Trap locations are selected based on levee terrain and river depth (i.e., for complete submergence).
+
+Gill net sampling typically occurs Monday through Friday from roughly dawn until mid afternoon. The gill net is set in locations selected by the boat operator to avoid known snags and unfavorable currents. The net is deployed cross current with the vessel downwind. On average, it takes approximately five minutes to set the net. We continuously monitor the deployed net to detect snags, tangles, marine mammal interactions, and to avoid conflicts with other vessels and hazards such as channel markers. The net is set as many times (usually 4-6) as possible each field day, with each set lasting up to ~55 minutes.
+
+<!--
+We record the following information for each net set. Further, we note any unusual procedures (e.g., had to pull net early due to possible snag).
+
+- net length
+- general geographic area (e.g., Suisun Bay)
+- latitude & longitude at the start of the net set
+- start & end times for net set & net retrieval
+- personnel (disc tagger & data recorder)
+- tidal state (as ebb, floor, or slack)
+- wind & wave conditions based on the Beaufort scale (0-12)
+- water temperature (to nearest 0.5 degree Celsius)
+- number of pinnipeds (seals or sea lions) within 50 meters of the net
+- pinnipeds raiding the net (yes or no)
+- other vessel interactions (yes or no)
+-->
+
+<!-- <TODO: more narrative for study description / design here> -->
+<!-- - objective with data (mark-recapture) -->
+
+#### changes  (come up with more descriptive section name)
+
+<!-- below for sturgeon change wording herein accordinlgy
+
+Up until <YYYY>, we only disc tagged legal-sized sturgeon. Beginning in <20YY>, we attempted to disc tag every sturgeon but smaller fish (i.e., < 100 cm TL) proved challenging to gauge in terms of excess wire and growth < explain better > .
+
+In 2013, responding to concers from National Marine Fisheries Services (NMFS) about handling listed species we stopped disc tagging Green Sturgeon. Regulations now restrict anglers from removing Green Sturgeon out of the water, and we catch too few Green Sturgeon to make any reliable estimates using disc tag information.
+
+In 2007 and again in 2019, we implanted passive integrated transponders (aka PIT tags) into a portion of our sturgeon catch. < more here >
+
+## Sampling Period & Sampling Locations
+
+This program has sampled nearly annually from 2005, prior to which sampling was irregular. It began in 1954, but sampling with some consistency did not materialize until the mid 1980s. We conduct fieldwork late summer through mid fall.
+
+Sampling locations have favored Suisun and San Pablo bays. We do not have specific sampling stations bounded by established waypoints and thus sample whereever we think we can (1) safely fish the net and (2) maximize our catch.
+
+-->
+
+<!-- <TODO: more narrative including map of sampling locations> -->
+
+## Gear Description
+
+Herein, we briefly describe fishing gear as detailed in our Operating Manual [@sb-manual]. Historically, we have manufactured in-house our gill nets and fyke traps from purchased raw materials.
+
+#### Gill Net
+
+Gill net dimension and construction are detailed in Sportfish tagging protocol [@sb-manual]. The main components are a lead line, float (or cork) line, and webbing. A full net contains the mesh sizes below. All webbing is multifilament nylon, double knot & double selvage (top & bottom).
+
+mesh size
+
+- 4" (85 meshes deep; #104 twine)
+- 4&frac12;" (74 meshes deep; #139 twine)
+- 5" (66 meshes deep; #208 twine)
+- 5&frac12;" (60 meshes deep; #208 twine)
+
+#### Fyke Trap
+
+Fyke trap design and construction was modeled after Hallock et al. -@hallock-1957. Each cylindrical trap is 20' L x 10' D. Materials included 2-inch UV stabilized polyethelene netting and 11-gauge galvanized chain link.
+
+<!-- drift trammel nets (construction ?) -->
+
+<!-- Our trammel net is a passive gear type (e.g., drift net; <TODO: add citation>). It is configured as 4<-8> contiguous panels, with each panel 45.72 m (L) x m 3.66 (D) [150 ft (L) x 12 ft (D)].  -->
+
+<!-- <TODO: explain inner & outer webbing, design, etc.> -->
+
+## Effort
+
+We deploy our gill net from the vessel’s stern using a hydraulic-powered net reel. Catch and weather (e.g., currents; wind) can dictate the number of daily deployments, but typically a vessel will set the net 5&pm; times. Net set and net retrieval times are recorded to the nearest minute (as `HH:MM`).
+
+We tether each fyke trap to the levee bank using wire, cable, and rope. We use an electric winch to slowly lower (or retrieve) each trap into (or from) the water. For optimal fishing, traps should be fully submerged, and we make every attempt to do so. Date & time set and date & time pulled are recorded for each trap (as `MM/DD/YYYY HH:MM`).
+
+We use set and retrieval (pull) times to calculate fishing effort. Gill net sets are measured in minutes fished and fyke traps in hours fished.
+
+<!-- <TODO: describe soak times; number sets per location per day; Describe how gear is used per site visit (Include table summarizing number of samples per gear type and sampling period (e.g. per month) per year.)> -->
+
+## Required Resources
+
+At minimum, this study requires the following "big ticket" items. Other items < see appendix ?? >.
+
+- one or two research vessels with hydraulic net reel & two tagging cradles
+- one research vessel with enough deck space for three tagging stations (cradles)
+- at least two complete 4-panel gill nets (or raw materials to build one)
+- 1-2 replacement gill net panels (in case of in-season damage)
+- 8-9 fyke traps in good condition
+- serially numbered disc tags (count: ~5000 to begin each season)
+- 4-5 personnel (per research vessel)
+  + Vessel Mate
+  + Fish & Wildlife Technician (deck hand)
+  + Environmental Scientist (or similar scientific staff)
+  + Scientific Aide (1 or 2 depending on needs and availability)
+
+## Initial Sampling Purpose
+
+Concerns that water diversions might adversely affect the recreational Striped Bass fishery compelled CDFW researchers to develop this large scale mark-recapture study. The original sampling purpose was to catch and then disc tag (i.e., the "mark") as many Striped Bass as possible. Population metrics calculated from available data would guide necessary actions for proper management of the Striped Bass fishery.

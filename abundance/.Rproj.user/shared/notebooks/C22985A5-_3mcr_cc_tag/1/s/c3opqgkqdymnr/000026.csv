@@ -1,0 +1,4 @@
+"0",""
+"0","# chunk clean up"
+"0","rm(ydat, colm, colf, yaxis)"
+"0",""

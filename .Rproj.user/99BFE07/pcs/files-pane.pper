@@ -1,0 +1,13 @@
+{
+    "path": "~/RProjects/StripedBassPopMetrics/abundance",
+    "sortOrder": [
+        {
+            "columnIndex": 1,
+            "ascending": false
+        },
+        {
+            "columnIndex": 2,
+            "ascending": true
+        }
+    ]
+}

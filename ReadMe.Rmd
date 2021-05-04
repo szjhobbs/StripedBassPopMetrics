@@ -1,0 +1,488 @@
+---
+output:
+   github_document:
+     pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+knitr::opts_chunk$set(echo = FALSE)
+
+now <- Sys.Date()
+
+```
+
+```{r load-libraries}
+
+library(sportfish)
+# library(package)
+
+```
+
+```{r load-data}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+# Tagging <- new.env()
+# ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+Stripers <- readRDS(file = file.path(data_dir, "StripedBass.rds"))
+Effort <- readRDS(file = file.path(data_dir, "Effort.rds"))
+
+# clean up
+rm(data_dir)
+
+```
+
+## Background
+
+The California Department of Fish & Wildlife (CDFW) studies adult Striped Bass using mark-recapture (tagging) methods. Since 1969, CDFW has used gill nets and fyke traps to capture and then disc tag many Striped Bass
+
+...
+more to come
+
+## Effort
+
+```{r effort}
+
+split_effort <- split(Effort, f = Effort[["RelYear"]])
+
+# to get annual summary (e.g., days fished; traps fished)
+effort <- vapply(
+  split_effort,
+  FUN = EffortSb,
+  FUN.VALUE = as.list(numeric(7L)),
+  sTime = StartTime, eTime = EndTime, netNum = DriftTrap
+)
+
+# next steps for convenience of display
+effort <- data.frame(
+  Year = as.numeric(dimnames(effort)[[2]]),
+  t(effort),
+  row.names = NULL
+)
+
+effort[] <- lapply(effort, FUN = unlist, use.names = FALSE)
+
+# not really needed (& field is somewhat confusing)
+effort$NetCountDup <- NULL
+
+```
+
+Here we display --- for now --- some annual effort for fyke traps. Data exist for other years and for gill net operations but are not readily available in electronic form. In the future, we hope to make available these data. Field headings are explained below.
+
+- Year: calendar year in which sampling was performed
+- Total: total hours fyke traps fished
+- Avg: daily average hours fyke traps fished
+- Var: daily variance hours fyke traps fished
+- Days: number of days fished
+- Fished: total (seasonal) number of fyke traps fished
+- Count: maximum daily number of fyke traps fished
+
+```{r effort-display}
+
+knitr::kable(
+  effort,
+  format = "markdown",
+  digits = 3,
+  col.names = c(
+    "Year", "Total", "Avg", "Var",
+    "Days", "Fished", "Count"
+  )
+)
+
+```
+
+```{r days-gear}
+
+# un-comment as needed
+# head(Stripers, n = 2)
+# table(Stripers$CapMethod, useNA = "ifany")
+
+# to get days fished per year by gear type
+days_gear <- with(data = Stripers, expr = {
+  
+  # to produce 0s in years of no sampling
+  l <- min(RelYear):as.numeric(format(Sys.Date(), format = "%Y"))
+  
+  yr <- factor(RelYear, levels = l)
+  
+  cm <- factor(CapMethod, levels = 1:2, labels = c(`1` = "GN", `2` = "FT"))
+  
+  s <- split(RelDate, f = list(yr, cm), drop = FALSE)
+  
+  vapply(s, FUN = function(x) {
+    length(unique(x))
+  }, FUN.VALUE = numeric(1L))
+  
+})
+
+# for convenience of display
+days_gear <- data.frame(
+  do.call(
+    what = rbind,
+    args = strsplit(names(days_gear), split = "\\.")
+  ),
+  Days = days_gear,
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+# did not bother change column names
+# X1 = year
+# X2 = gear type
+
+# for convenience of plotting
+days_gear$X1 <- as.numeric(days_gear[["X1"]])
+
+```
+
+```{r years-no-sampling}
+
+# for convenience in narrative
+years_no_sampling <- with(data = days_gear, expr = {
+  
+  n <- table(X1[Days == 0])
+  out <- names(n)[n == 2]
+  
+  paste0(out, collapse = "; ")
+  
+})
+
+```
+
+Here we display annual time series (since `r min(Stripers[["RelYear"]])`) of days sampled (fished) by gear type (GN = gill net; FT = fyke trap). We did not conduct mark-recapture operations in the following years: `r years_no_sampling`.
+
+*Note*: We essentially stopped gill netting (GN) in 2009. We deployed gill nets only one day in 2011.
+
+```{r plot-days-gear}
+
+# for stacked plot
+mat_layout <- matrix(data = 1:2, nrow = 2, ncol = 1, byrow = TRUE)
+nf <- layout(mat = mat_layout)
+# layout.show(n = nf)
+
+# for keeping bottom & left spaces to display axes title
+# par(oma = c(4, 5, 1, 1), cex.axis = 1.5, family = "sans")
+par(oma = c(3, 3, 0.5, 1), cex.axis = 1.05)
+
+with(data = days_gear, expr = {
+  
+  # to create empty plot
+  rngx <- range(X1)
+  rngy <- range(Days)
+  
+  # for plotting both gear types
+  vals <- lapply(list("GN", "FT"), FUN = function(g) {
+    
+    par(mar = c(0.1, 0.5, 1.0, 0.1), mgp = c(1, 0.6, 0))
+    
+    # to get data specific to gear type
+    b <- X2 %in% g
+    
+    # to plot annual ticks every 5 years
+    xtick <- X1 %% 5 == 0
+    
+    plot(
+      x = rngx,
+      y = rngy,
+      type = "n",
+      xaxt = "n",
+      las = 1,
+      yaxt = "n",
+      # xlab = "Year",
+      # ylab = sprintf(fmt = "Days sampled (%s)", g),
+      xlim = rngx + c(1, -1)
+    )
+  
+    # custom y-axis tick display
+    axis(
+      side = 2,
+      at = axTicks(side = 2)[c(TRUE, FALSE)],
+      labels = axTicks(side = 2)[c(TRUE, FALSE)],
+      col = "transparent",
+      col.ticks = "grey30",
+      cex = 1.05,
+      las = 1
+    )
+  
+    # for grey background & white gridlines
+    par(xaxp = c(rngx, diff(rngx)))
+    grid(lwd = 1000, col = "grey90")
+    grid(lty = 1, col = "white", lwd = 1)
+  
+    # plot data as bar
+    lines(
+      # x = X1[b] - 0.2,
+      x = X1[b],
+      y = Days[b],
+      lend = 1,
+      lwd = 6,
+      # col = "orange2",
+      # col = rgb(0, 0, 0, 0.75),
+      col = "grey40",
+      type = "h"
+    )
+    
+    # for identifying which plot is which
+    mtext(
+      text = sprintf(fmt = "Gear type: %s", g),
+      side = 3,
+      line = 0,
+      adj = 0
+    )
+    
+    # output for convenience of custom x-axis
+    xtick
+  })
+  # end lapply()
+  
+  # resent to one plot
+  layout(mat = 1)
+  
+  # custom x-axis
+  axis(
+    side = 1,
+    at = X1[vals[[1]]],
+    labels = X1[vals[[1]]],
+    col = "transparent",
+    col.ticks = "grey30",
+    cex = 1.05
+  )
+  
+  # axis labels
+  mtext(text = "Year", side = 1, line = 1.75)
+  mtext(text = "Days sampled", side = 2, line = 2)
+})
+
+```
+
+## Catch
+
+```{r catch}
+
+# for convenience of splitting & renaming
+split_vars <- c("RelYear", "CapMethod")
+
+# to get at count tagged & total catch per split_vars
+split_striper <- split(
+  Stripers[c("TagNum", "TagAction", "Count")], 
+  f = Stripers[split_vars],
+  drop = FALSE
+)
+
+# total catch & number tagged
+catch <- vapply(split_striper, FUN = function(x) {
+  
+  # because tagging action 1 = tagged & field only active since 2011 not since
+  # inception 1969 (prior to 2011 use NA)
+  b <- is.na(x[["TagAction"]]) | x[["TagAction"]] %in% 1
+  
+  c(Tagged = sum(b), Total = sum(x[["Count"]]))
+  
+}, FUN.VALUE = numeric(2L))
+
+# for convenience of display
+catch <- data.frame(
+  do.call(
+    what = rbind,
+    args = strsplit(dimnames(catch)[[2]], split = "\\.")
+  ),
+  t(catch),
+  stringsAsFactors = FALSE,
+  row.names = NULL
+)
+
+catch[] <- lapply(catch, FUN = as.numeric)
+
+colnames(catch)[1:length(split_vars)] <- split_vars
+
+```
+
+```{r catch-display, eval=FALSE}
+
+# table is quite long to display, opting for graphic instead
+
+catch$CapMethod <- factor(
+  catch[["CapMethod"]],
+  levels = 1:2,
+  labels = c(`1` = "GillNet", `2` = "Fyke")
+)
+
+knitr::kable(
+  reshape(
+    data = catch,
+    timevar = "CapMethod",
+    idvar = "RelYear",
+    direction = "wide",
+    sep = " "
+  ),
+  format = "markdown"
+)
+
+```
+
+Here we plot annual time series by gear type (GN = gill net, FT = fyke trap) of total Striped Bass caught and Striped bass tagged (of those caught).
+
+<!-- *Note*: <need to talk about how earlier years electronic data not available for fish not tagged> -->
+
+```{r plot-catch}
+
+# head(catch)
+
+# for stacked plot
+mat_layout <- matrix(data = 1:2, nrow = 2, ncol = 1, byrow = TRUE)
+nf <- layout(mat = mat_layout)
+# layout.show(n = nf)
+
+# for keeping bottom & left spaces to display axes title
+# par(oma = c(4, 5, 1, 1), cex.axis = 1.5, family = "sans")
+par(oma = c(3, 3, 0.5, 1), cex.axis = 1.05)
+
+with(data = catch, expr = {
+  
+  # to create empty plot
+  rngx <- range(RelYear)
+  rngy <- range(Total)
+  
+  # 
+  all_years <- rngx[1]:rngx[2]
+  xtick <- all_years %% 5 == 0
+  # print(xtick)
+  
+  # for plotting both gear types
+  vals <- lapply(list(1, 2), FUN = function(g) {
+    
+    par(mar = c(0.1, 0.5, 1.0, 0.1), mgp = c(1, 0.6, 0))
+    
+    # to get data specific to gear type
+    b <- CapMethod %in% g & Total != 0
+    
+    # to plot annual ticks every 5 years
+    # xtick <- all_years %% 5 == 0
+    
+    plot(
+      x = rngx,
+      y = rngy,
+      type = "n",
+      xaxt = "n",
+      las = 1,
+      yaxt = "n",
+      # xlab = "Year",
+      # ylab = sprintf(fmt = "Days sampled (%s)", g),
+      xlim = rngx + c(1, -1)
+    )
+    
+    # print(axTicks(side = 2))
+    # y_format <- AxisFormat(axTicks(side = 2))
+  
+    # custom y-axis tick display
+    axis(
+      side = 2,
+      at = axTicks(side = 2),
+      labels = axTicks(side = 2) / 1000,
+      col = "transparent",
+      col.ticks = "grey30",
+      cex = 1.05,
+      las = 1
+    )
+  
+    # for grey background & white gridlines
+    par(xaxp = c(rngx, diff(rngx)))
+    grid(lwd = 1000, col = "grey90")
+    grid(lty = 1, col = "white", lwd = 1)
+  
+    # plot total data as bar
+    lines(
+      # x = X1[b] - 0.2,
+      x = RelYear[b],
+      y = Total[b],
+      lend = 1,
+      lwd = 10,
+      # col = "orange2",
+      # col = rgb(0, 0, 0, 0.75),
+      col = "grey40",
+      type = "h"
+    )
+    
+    # plot tagged data as bar
+    lines(
+      # x = X1[b] - 0.2,
+      x = RelYear[b],
+      y = Tagged[b],
+      lend = 1,
+      lwd = 1,
+      # col = "orange2",
+      # col = rgb(0, 0, 0, 0.75),
+      col = "orange2",
+      type = "h"
+    )
+    
+    glkp <- c(`1` = "GN", `2` = "FT")
+    
+    # for identifying which plot is which
+    mtext(
+      text = sprintf(fmt = "Gear type: %s", glkp[g]),
+      side = 3,
+      line = 0,
+      adj = 0
+    )
+    
+    # output for convenience of custom x-axis
+    # xtick
+    sum(b)
+  })
+  # end lapply()
+  
+  # resent to one plot
+  layout(mat = 1)
+  # print(vals)
+  
+  # custom x-axis
+  axis(
+    side = 1,
+    # at = RelYear[vals[[1]]],
+    # labels = RelYear[vals[[1]]],
+    at = all_years[xtick],
+    labels = all_years[xtick],
+    col = "transparent",
+    col.ticks = "grey30",
+    cex = 1.05
+  )
+  
+  # axis labels
+  mtext(text = "Year", side = 1, line = 1.75)
+  mtext(text = bquote("Count" ~~ 'x' ~ 10^3), side = 2, line = 2)
+  
+  # print(axTicks(side = 1))
+  
+  par(lend = 1)
+  
+  legend(
+    x = 2018,
+    y = 15200,
+    legend = c("Total", "Tagged"),
+    col = c("grey40", "orange2"),
+    lwd = c(10, 1),
+    border = NA,
+    # col = NA,
+    bty = "n",
+    ncol = 2,
+    xpd = TRUE,
+    xjust = 1,
+    yjust = 0,
+    x.intersp = 0.5,
+    seg.len = 2
+  )
+})
+
+```
+
+---
+
+Contact [Jason DuBois](mailto:jason.dubois@wildlife.ca.gov)  
+CDFW, SportFish Unit    
+`r Sys.Date()`

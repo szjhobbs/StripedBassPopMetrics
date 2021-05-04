@@ -1,0 +1,32 @@
+
+July 2017
+
+06 -->
+Met with Ken & Lara to discuss modeling 2017 mark-recapture data with hopes of producing some abundance estimate. Ken said there's a lot to work with here, even enough for a grad student's Masters thesis.
+
+Ken's thoughts were to start simple & then work to more complex model. Simple models would make some assumptions, like closed population, etc.
+
+Possible Models
+(1)  Simple Petersen estimate (close population with no tag loss, no mortality)
+(1a) Repeat 1 but allow for tag loss (assuming 5% loss --> recaptures / 0.95)
+(1b) Repeat 2 but allow for tag mortality
+(2)  Schnabel method & assumed closed population
+(3)  Pollock method (pop estimate by period [e.g. week] assuming close population for said period)
+(4)  (more complex) Jolly-Seber using POPAN from program MARK
+
+Exploratory Data Ananlysis (EDA)
+(1) recapture rate by trap --> thinking is that rate would decrease moving up-river
+    can consider river km of trap then plot rate ~ river km
+(2) develop matrix of traps (rel x rec) where data are recap rate
+
+Ken stressed learing more about Program MARK and RMark and even suggested I take a workshop on using MARK.
+
+25 -->
+Been working lately to apply Schnabel and Schumacher & Eschmeyer methods to estimate N (overall) and per each interval (i, for example date or week). Broke through today (see code in MarkRecap-Development.R, section 'count by date'). Problem is I have not yet been able to calculate CIs given equations in Ricker or like sources. Well, I can calculate them but they are large (ridiculously so) and something seems a miss. So next step is to learn to calculate CIs.
+
+Need to also...
+(1) [like Ken said] calculate some probability of moving distance X within +/- 1-2 days
+(2) make estimates like above but instead of by date, try by week, or groups of 4 days
+(3) try to run Schnabel and Schumacher & Eschmeyer methods using RMark functions (Program MARK)
+(4) try to run some simulations --- once 1-3 are dialed in --- varying recaptures (& maybe other variables)
+(5) try other models that incorporate movement, death, tag loss, etc.

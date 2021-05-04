@@ -1,0 +1,11 @@
+"0",""
+"0","# the data directory for bay study"
+"0","data_dir <- ""data/tagging"""
+"0",""
+"0","# Tagging <- new.env()"
+"0","# ReadRDSFiles(fileDir = data_dir, envir = Tagging)"
+"0",""
+"0","Stripers <- readRDS(file = file.path(data_dir, ""StripedBass.rds""))"
+"2","cannot open compressed file 'data/tagging/StripedBass.rds', probable reason 'No such file or directory'"
+"2","Error in gzfile(file, ""rb"") : cannot open the connection
+"

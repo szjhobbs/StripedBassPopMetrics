@@ -1,0 +1,330 @@
+---
+
+---
+
+<!-- strengths & weaknesses -->
+
+```{r setup5, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Sampling Timeline
+
+```{r sb-sampling}
+
+sampling <- Split(data = Tagging[["StripedBass"]], splitVars = RelYear)
+  
+# for desired data type
+sampling$RelYear <- as.numeric(sampling[["RelYear"]])
+
+# for sampling (yes or no) by gear type (fykes or gill nets)
+sampling$GearUsed <- t(vapply(sampling[["Data"]], FUN = function(d) {
+  
+  cm <- factor(
+    unique(d[["CapMethod"]]),
+    levels = c(2, 1),
+    labels = c("FT", "GN")
+  )
+  
+  table(cm)
+  
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+```{r timeline}
+
+# chunk establishes variables for plotting project timeseries (sampled or not
+# sampled)
+
+sampling_years <- sort(unique(sampling[["RelYear"]]))
+range_years <- range(sampling_years)
+all_years <- seq(from = range_years[[1]], to = range_years[[2]], by = 1)
+
+creel_years <- sort(unique(Tagging[["CreelCensus"]][["Year"]]))
+
+non_sampled <- all_years[!(all_years %in% sampling_years)]
+non_cc <- all_years[!(all_years %in% creel_years)]
+
+non_gn <- union(
+  x = non_sampled,
+  y = sampling[["RelYear"]][sampling[["GearUsed"]][, "GN"] == 0]
+)
+
+non_ft <- union(
+  x = non_sampled,
+  y = sampling[["RelYear"]][sampling[["GearUsed"]][, "FT"] == 0]
+)
+
+```
+
+```{r plot-timeline, fig.width=8, fig.height=1.5}
+
+# plotting timeseries of sampled & non-sampled years
+par(mar = c(1, 1, 0.75, 0.5), oma = c(1, 1, 0.75, 0.5))
+
+# lay down empty plot
+p <- Plot(x = range_years, y = 0:1, adjUsr = 0.4)
+p$grid(xRng = TRUE, yRng = TRUE, ny = 4)
+
+# add just sampling years: GN; FT; and CC
+points(
+  x = sampling_years,
+  y = sampling[["GearUsed"]][, "GN"] - 0.25
+)
+
+points(
+  x = sampling_years,
+  y = sampling[["GearUsed"]][, "FT"] - 0.50
+)
+
+points(
+  x = creel_years,
+  y = rep(0.25, times = length(creel_years))
+)
+
+# sampled but data not in electronic format
+points(
+  x = c(1969:1975, 1977, 1978),
+  y = rep(0.25, times = length(c(1969:1975, 1977, 1978))),
+  pch = 10
+  # col = "steelblue"
+)
+
+# add periods of no sampling: GN; FT; and CC
+points(
+  x = non_gn,
+  y = rep(1 - 0.25, length(non_gn)),
+  col = "red",
+  pch = 4,
+  lwd = 2
+)
+
+points(
+  x = non_ft,
+  y = rep(1 - 0.50, length(non_ft)),
+  col = "red",
+  pch = 4,
+  lwd = 2
+)
+
+points(
+  x = non_cc[non_cc > 1978],
+  y = rep(0.25, times = sum(non_cc > 1978)),
+  col = "red",
+  pch = 4,
+  lwd = 2
+)
+
+# complete axis tick labels
+Axis(p, side = 1, labelAdj = 0.25, interval = 5, offset = 1)
+
+axis(
+  side = 2,
+  at = c(0.25, 0.50, 0.75),
+  labels = c("CC", "FT", "GN"),
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50",
+  cex.axis = 1,
+  las = 1,
+  tcl = -0.2,
+  family = "mono"
+)
+
+# for identification sampled and not sampled points
+legend(
+  x = range_years[[2]],
+  y = 1 * 1.4,
+  legend = c("sampled", "sampled-see note", "not sampled"),
+  pch = c(1, 10, 4),
+  col = c(1, 1, 2),
+  pt.lwd = c(1, 1, 2),
+  ncol = 3,
+  bty = "n",
+  xjust = 1,
+  # text.width = 10,
+  xpd = TRUE
+)
+
+# for neatness & organization
+Sampling <- list(
+  NonCC = sort(non_cc),
+  NonFT = sort(non_ft),
+  NonGN = sort(non_gn),
+  NonFTGN = sort(non_sampled),
+  Range = range_years
+)
+
+# clean up
+rm(
+  non_cc, non_ft, non_gn, non_sampled, sampling,
+  sampling_years, p, all_years, creel_years,
+  range_years
+)
+
+```
+
+#### Creel Census (CC)
+
+Staff reduction due to budget cuts essentially ended the creel census (October 2009). To the best of our knowledge, no attempts were made to reinstate such operation.
+
+In 1977 and 1978, the creel census did not sample private boats and sampling of party (charter) boats was substantially reduced [White -@white-1986]. *Note*: Data from 1969-1975 and 1977-1978 currently not available electronically.
+
+#### 2010s
+
+We ceased gill netting operations due to reduced staffing and redirection of vessel operators to higher priority projects. Further, the prevailing mindset postulated fyke traps would catch more Striped Bass, and thus we would fish the gill nets "opportunistically." *Note*: in 2011 we deployed gill nets for only one day (19-Apr).
+
+We did not deploy fyke traps in 2014 due to extremely low flows (a drought year) and redirection of staff to higher priority projects. It remains the only year in the timeseries where no sampling occurred on any level (fyke trap, gill net, or creel census).
+
+#### 2000s
+
+It is not entirely clear why in 2007 we did not deploy gill nets and why in 2006 we did not sample (gill nets or fyke traps). For 2006, it is possible high flows played a role in the decision not to sample.
+
+Analyses from the early 1990s [unpublished -@sfra-2002] suggested tagging in alternate years would suffice for estimating populations metrics. Thus, sampling would occur in even-numbered years only (i.e., 2000 & 2002), not 2001. However, annual sampling was reinstated --- for reasons not yet found --- beginning with the 2003 field season.
+
+"Logistical difficulties" were cited as the reason why fyke traps were not deployed in 2002 [unpublished -@sfra-2002]. Though not explicitly stated, logistical issues could include high river flows, personnel, and (or) equipment.
+
+*Note*: unpublished -@sfra-2002 does not specifically reference analysis (or analyses) that demonstrated alternate sampling would suffice. We are still investigating the reporting of such analytics.
+
+*Note*: unpublished -@sfra-2002 available as `30-1_02.doc` in Sportfish Unit directory (Stockton, Bay Delta).
+
+#### 1990s
+
+Analyses from the early 1990s [unpublished -@sfra-2002] suggested tagging in alternate years would suffice for estimating populations metrics. Thus, sampling would occur in even-numbered years only (i.e., 1994; 1996; & 1998), not 1995, 1997, and 1999.  
+
+"Logistical difficulties" were cited as the reason why fyke traps were not deployed in 1998 [unpublished -@sfra-2002]. Though not explicitly stated, logistical issues could include high river flows, personnel, and (or) equipment.
+
+*Note*: see *Note*s in section [2000s].
+
+#### 1970s
+
+We did not deploy fyke traps in 1977 and 1978 [White -@white-1986]. It remains unclear as to *why* fyke traps did not fish in those years.
+
+## Sampling Changes
+
+#### Gear
+
+*gill net material (changed over time?)*
+
+*fyke trap material (changed over time?)*
+
+#### Fishing Time
+
+Most data for time set and time pulled (i.e., fishing effort) are not available electronically. Recently, we have entered into our current database some effort data. More field seasons --- particularly the early ones --- remain to be entered.
+
+Based on available electronic data, it appears average daily fishing time for fyke traps reduced from 35&pm; to 24&pm; hours <reference to Appendix?>. Such a reduction was likely in response to concerns that ESA species (e.g., spring run Chinook Salmon) might be contained for too long. Thus, since roughly 2000, each fyke trap must be checked within 24 hours. (Checking a trap temporarily renders it not fishing, as this process requires removal from the water for inspection.)
+
+<!-- any changes in fishing time of gill nets? not apparent but averages vary -->
+
+<!-- fishing time reduced (for pinniped mitigation) -->
+
+<!-- shift from a few net sets per day to 5-6 per day -->
+
+#### Tagging
+
+<!-- may need citation for reg changes and tallying 38-41 see 30-1_02.doc for Striper Bass population -->
+
+<!-- should discuss location change of disc tag from peduncle to below fin -->
+
+By original design, this project disc tagged only legal-sized Striped Bass. From 1969 to February 1982 legal size was 16 inches total length (the equivalent to 38 centimeters fork length [cm FL]). The current legal size --- established March 1982 --- is 18 inches total length (the equivalent to 42 cm FL). Beginning with the 1982 field season, CDFW field crews tallied all Striped Bass 38-41 cm FL and disc tagged Striped Bass 42 cm FL and above.
+
+In 2010 --- for reasons not well documented, we began disc tagging sub-legal sized Striped Bass. A minimum length was never clearly defined, but fish as small as 30 cm FL have received a disc tag. Likely this minimum size was dictacted by the minimum length caught by our fyke traps (i.e., very few fish < 30 cm FL are caught in our fyke traps).
+
+#### Research Vessels
+
+We used one pontoon boat for fyke trap operations. <!-- since 1969?  For at least two decades, was the R/V *Kayot*. -->
+
+Typically, we used two R/Vs for gill netting operations. Excecptions were for 1977 and 1978 when we used only one R/V.
+
+<!-- In 2006, we employed two research vessels (R/V) for the first time since the study's inception. We continued using two vessels through 2017, with 2008 excepted. In 2019, only the R/V *New Alosa* was available for sturgeon tagging. -->
+
+<!-- [not a sampling change per se] reward denominations -->
+
+<!-- [not a sampling change per se] fin ray collection -->
+
+<!-- recorded total length until 2013 (when regs changed) then fork length -->
+<!-- tagged greens and whites through 2012 stopped disc tagging greens in 2013 -->
+
+<!-- shift in sampling from Sep & Oct to include Aug, some Nov sampling -->
+
+<!-- began recording coordinates ? -->
+<!-- began recording water temp 2005 -->
+<!-- began recording tide & beaufort scale 2007 -->
+<!-- began recording bycatch ? -->
+<!-- began recording effort 1968 (?) -->
+
+## Evaluating Effort & Efficacy
+
+<!-- a.	What is the program element staff doing to continually assess and improve the long-term monitoring effort in support of management priorities? Please provide short responses for each of the categories listed below:  -->
+<!-- i.	Assess and incorporate new variables -->
+<!-- ii. Field or analytical studies to assess current & new sampling methods -->
+<!-- iii.	Analytical studies to evaluate current and new analytical methods -->
+<!-- iv.	Evaluation of new technologies or new gear types -->
+<!-- v.	Review and improve monitoring program element processes -->
+<!-- vi.	Using historical information to change the program element design -->
+<!-- vii.	Other -->
+
+In the recent two decades, this program has done very little in terms of self assessment and (or) self improvment. We have been plagued by personnel turnover, truncated field seasons due to vessel issues and (or) redirection of staff to higher priority projects, insufficient expertise in the fields of fishery management and mark-recapture, and limited exploratory analyses to guide new or revised research.
+
+<!--
+possible ideas below
+daily water temp
+bycatch
+fyke trap UV mesh
+gill net config
+
+disc tag placement
+disc tag wire
+disc tag type
+-->
+
+<!-- ability to incorporate new variables -->
+<!-- ability to implement new sampling methods -->
+<!-- evaluation of new gear types -->
+<!-- improvements over time -->
+
+## Bycatch (Other Species)
+
+```{r by-catch}
+
+by_catch <- with(data = Tagging[["ByCatch"]], expr = {
+  
+  # freq <- sort(table(Species), decreasing = TRUE)
+  freq <- aggregate(Count, by = list(s = FishName), FUN = sum, na.rm = TRUE)
+  freq <- freq[order(freq[["x"]], decreasing = TRUE), ]
+  
+  # top5 <- freq[1:5]
+  # paste0(names(top5), " (n=", top5, ")", collapse = "; ")
+  
+  # freq[1:10, ]
+  freq
+})
+
+top <- 10L
+
+steelhead <- c(by_catch[by_catch[["s"]] %in% "Steelhead", ])
+steelhead <- paste0(steelhead[["s"]], " (n=", steelhead[["x"]], ")")
+
+```
+
+Below, we display the top `r top` in overall numbers bycatch species. We likely began recording bycatch early in this project's hisotry, but electronic records are currently available from 1996. `Count` includes all sampling years since 1996. This project has caught very few `r steelhead` (includes only from 1996-present). We have recorded --- though not consistently --- length, codition, coloration, and adipose fin (presence or absence) for all salmonids.
+
+<!-- bycatch for fykes only, yes? confirm -->
+
+```{r by-catch-show}
+
+knitr::kable(
+  by_catch[1:top, ],
+  format = "markdown",
+  col.names = c("Species", "Count"),
+  row.names = FALSE,
+  format.args = list(big.mark = ",")
+)
+
+# clean up
+rm(top, steelhead)
+
+```

@@ -1,0 +1,453 @@
+---
+
+---
+
+### Creel Census Data
+
+We could explore catch-per-unit-effort using `CreelCensus`. This dataset provides us catch, number of anglers, and hours fished per event (i.e., angler or angler group interviewed by creel clerk). Angler-hour (i.e., one angler fishing for one hour) provides effort. However, as we've learned the hour data did not upload cleanly from older dBase or `.xls` files to Access. The `Hours` field in `CreelCensus` is of datatype character with some considerably large values (e.g., "960"; see display below). We need to and should reconcile these values with the original datasheets. Likely, for example "960" should be 9.6.
+
+```{r cc-data-check}
+
+cc_check <- with(data = Tagging[["CreelCensus"]], expr = {
+  
+  # filter on striped bass
+  b <- Species %in% "1"
+  
+  lkp <- c(`TRUE` = "yes", `FALSE` = "no")
+  
+  AnglersNA <- lkp[as.character(is.na(Anglers[b]))]
+  CatchNA <- lkp[as.character(is.na(Catch[b]))]
+  
+  list(
+    AnglerCatchNA = table(AnglersNA, CatchNA, Type[b]),
+    Hours = sort(unique(Hours[b]), na.last = TRUE)
+  )
+})
+
+```
+
+```{r cc-check-hours-display}
+
+cc_check[["Hours"]]
+
+```
+
+#### Catch per Angler-Day
+
+Catch per angler-day (i.e., one angler fishing one day) will work as an alternative. Angler & catch data are mostly clean with some of each being NA (see below by creel type: bay or river). Twenty-five records show catch but no angler. We should at some point reconcile these records with original datasheets. For now and because there are so few, we can remove them from analytics herein.
+
+```{r cc-check-angler-display}
+
+cc_check[["AnglerCatchNA"]]
+
+```
+
+Here we use `cc_split[["Data"]]` created in file `_2age_com.Rmd`. The 'split' --- among other variables --- is on `MainID`, essentially date. So, we can sum catch and anglers, and then divide the sums (catch / angler) to get catch-per-angler-day.
+
+```{r ccsplit-cpue}
+
+cc_split$CPUE <- t(vapply(cc_split[["Data"]], FUN = function(d) {
+  
+  if (all(!d[["Dup"]]) || all(d[["Catch"]] < 12)) {
+    ang <- sum(d[["Anglers"]], na.rm = TRUE)
+    cth <- sum(d[["Catch"]], na.rm = TRUE)
+    cpe <- cth / ang
+    return(c(Anglers = ang, Catch = cth, CPUE = cpe, Check = 0))
+  }
+  # end if
+    
+  # to variable b for convenience
+  b <- d[["Dup"]]
+    
+  x <-  sum(d[["Catch"]], na.rm = TRUE)
+  y <-  sum(d[["LenSexCount"]], na.rm = TRUE)
+    
+  r <- x - y
+    
+  # sum of catch for duplicated records
+  p <- sum(d[b, "Catch"], na.rm = TRUE)
+    
+  ang <- sum(d[!b, "Anglers"], na.rm = TRUE)
+  cth <- (r - p) + y
+  cpe <- cth / ang
+    
+  # final output
+  c(Anglers = ang, Catch = cth, CPUE = cpe, Check = 99)
+  
+}, FUN.VALUE = numeric(4L)))
+# end vapply
+
+```
+
+```{r cc-cpue-dstats, warning=FALSE}
+
+# cols <- c("CYear", "Month", "Type")
+cols <- c("CYear", "Month")
+
+# for mean & variance CPUE
+cc_cpue <- aggregate(
+  cc_split[["CPUE"]][, "CPUE"],
+  by = cc_split[cols],
+  # FUN = DescStat
+  # FUN = function(x) unlist(DescStat(x))
+  FUN = function(x) {
+    x <- Filter(f = Negate(is.infinite), x = x)
+    unlist(DescStat(x))
+  }
+)
+
+# for preferred format
+cc_cpue <- data.frame(
+  cc_cpue[cols],
+  cc_cpue[["x"]],
+  stringsAsFactors = FALSE
+)
+
+```
+
+```{r plot-mean-cpue, eval=FALSE}
+
+# attempt to plot mean cpue +/- SD but abandoned the idea for now (14-Jul-2020);
+# did not seem all that informative
+
+lo <- layout(mat = matrix(1:12, ncol = 3, byrow = TRUE))
+
+par(mar = c(1, 1, 1, 1), oma = c(0.5, 0.5, 0.5, 0.5))
+
+lapply(1:12, FUN = function(m) {
+  
+  s <- substitute(expr = Month %in% m, env = list(m = m))
+  # s <- substitute(expr = Month %in% m, env = cc_cpue)
+  # b <- eval(expr = s, envir = cc_cpue)
+  
+  # p <- Plot(
+  #   data = cc_cpue,
+  #   x = CYear,
+  #   y = Avg,
+  #   yerr = ss,
+  #   # subset = eval(s),
+  #   adjUsr = 0.5
+  # )
+
+  p <- Plot(
+    x = cc_cpue[["CYear"]],
+    y = cc_cpue[["Avg"]],
+    yerr = sqrt(cc_cpue[["Var"]]),
+    adjUsr = 0.5
+  )
+  
+  p$grid(xRng = TRUE)
+  
+  # d <- subset(as.data.frame(p$data()), subset = eval(s, envir = cc_cpue))
+  d <- subset(
+    as.data.frame(p$data()), 
+    subset = cc_cpue[["Month"]] %in% m
+  )
+  
+  segments(
+    x0 = d[["x"]],
+    y0 = d[["y"]] - d[["yerr"]] ,
+    y1 = d[["y"]] + d[["yerr"]]
+  )
+  # 
+  # # points(p)
+  points(
+    formula = y ~ x,
+    data = d
+  )
+  # 
+  mtext(
+    text = month.abb[m],
+    side = 3,
+    line = 0,
+    adj = 1,
+    cex = 0.75,
+    col = "grey30",
+    font = 3
+  )
+
+  # p$data()
+  
+  # eval(s, envir = cc_cpue)
+  # d
+  
+})
+
+```
+
+```{r bubbleplot, eval=FALSE}
+
+# attempt at some type of bubble plot to demonstrate annual cpue variation by
+# month but abandoned the idea for now (14-Jul-2020)
+
+# str(cc_cpue)
+
+p_cc_cpue <- Plot(data = cc_cpue, x = CYear, y = Month, adjUsr = 0.5)
+
+p_cc_cpue$grid(xRng = T, yRng = T)
+
+Axis(p_cc_cpue, side = 1, labelAdj = 0.2, interval = 5, offset = -1)
+Axis(p_cc_cpue, side = 2, labelAdj = 0.3)
+
+# points(p_cc_cpue, cex = cc_cpue$Avg * 1.0, col = as.factor(cc_cpue$Type), pch = as.numeric(as.factor(cc_cpue$Type)))
+
+points(p_cc_cpue, cex = cc_cpue[["Avg"]])
+
+```
+
+```{r plot-boxplot, eval=FALSE}
+
+# attempt to plot box plot but abandoned the idea for now (14-Jul-2020)
+
+p_bx <- Plot(
+  x = cc_split[["CYear"]],
+  y = cc_split[["CPUE"]][, "CPUE"],
+  subset = !is.infinite(cc_split[["CPUE"]][, "CPUE"]) &
+    !is.na(cc_split[["CPUE"]][, "CPUE"]) &
+    (cc_split[["CPUE"]][, "CPUE"] > 0 & cc_split[["CPUE"]][, "CPUE"] < 7) &
+    cc_split[["Type"]] %in% "rvr"
+)
+
+p_bx$grid()
+
+points(
+  x = unique(p_bx$data()[["x"]]),
+  y = aggregate(
+    y ~ x, 
+    data = p_bx$data(),
+    FUN = median, 
+    na.rm = TRUE
+  )[["y"]]
+)
+
+Axis(p_bx, side = 2)
+
+```
+
+**Note**: we explored mean catch-per-angler-day, but the results did not seem too informative. Realize that most of what's recorded in this dataset is catch-n-keep. So, mean catch-per-angler-day hovers right around the daily bag limit. We think catch-per-angler-hour would be more informative.
+
+#### Zero Catch
+
+We can, however, explore zero catch frequency. That is, how many times in a given month were there reports of effort but no catch. We express zero catch as the ratio number records of zero catch to all records. The ratio is 0 to 1, with a higher number indicating increased occurrences of zero catch.
+
+Below, we display a tile plot of month by year. Below the plot is a table showing total records by month & year. Some months may indicate a high ratio but have few total records. *Note*: sampling Jan-May did not begin until 1988 with the introduction of River Creel (Dec 16 - Jun 15).
+
+```{r cc-cpue-ratio0}
+
+# because we only need the data variable CYear & Month already exist in cc_cpue
+cc_cpue$Data <- Split(
+  data = cc_split, 
+  vars = CPUE, 
+  splitVars = c(CYear, Month), 
+  drop = TRUE
+)[["Data"]]
+
+# to get ratio of records with 0 catch to all records
+cc_cpue$Ratio0 <- t(vapply(cc_cpue[["Data"]], FUN = function(d) {
+  # return(nrow(d))
+  b <- d[["CPUE"]][, "Catch"] %in% 0
+  if (all(!b)) return(c(Ratio = 1, Recs = nrow(d)))
+  a0 <- sum(d[["CPUE"]][b, "Anglers"], na.rm = F)
+  a <- sum(d[["CPUE"]][, "Anglers"], na.rm = F)
+  c(Ratio = a0 / a, Recs = nrow(d))
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+```{r plot-ratio0-tile}
+
+# range(cc_cpue[["Ratio0"]][, "Ratio"])
+
+lo <- layout(mat = 2:1, heights = c(0.15, 0.85))
+par(mar = c(1.5, 1.5, 0.5, 0.5), oma = c(1.5, 1.5, 0.5, 0.5))
+
+p_ratio0 <- Plot(data = cc_cpue, x = CYear, y = Month, adjUsr = 1)
+
+# p_ratio0$grid(yRng = TRUE, xRng = TRUE)
+
+adj <- 0.5
+
+col_tile <- rgb(
+  red = 0.27, 
+  green = 0.50, 
+  blue = 0.70, 
+  alpha = cc_cpue[["Ratio0"]][, "Ratio"]
+)
+
+rect(
+  xleft = p_ratio0$data()[["x"]] - adj, 
+  ybottom = p_ratio0$data()[["y"]] - adj, 
+  xright = p_ratio0$data()[["x"]] + adj,
+  ytop = p_ratio0$data()[["y"]] + adj,
+  col = col_tile,
+  border = NA
+)
+
+xtks <- Reduce(f = `:`, x = p_ratio0[["xrng"]])
+ytks <- Reduce(f = `:`, x = p_ratio0[["yrng"]])
+# p_ratio0$xticks()
+
+par(mgp = c(3, 0.4, 0))
+
+axis(
+  side = 2,
+  at = ytks,
+  labels = substr(month.abb, start = 1, stop = 1),
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50",
+  las = 1,
+  tcl = -0.3, 
+  family = "mono"
+)
+
+par(mgp = c(3, 0.3, 0))
+
+axis(
+  side = 1,
+  at = xtks[xtks %% 5 == 0],
+  labels = xtks[xtks %% 5 == 0],
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50",
+  las = 1,
+  tcl = -0.3
+)
+
+axis(
+  side = 1,
+  at = xtks,
+  labels = NA,
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50",
+  las = 1,
+  tcl = -0.2
+)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Month", side = 2, line = 1.3)
+
+# color bar
+
+par(mar = c(1, 0.5, 1, 0.5))
+
+p_ratio0_cb <- Plot(
+  x = seq(from = 0.1, to = 1, by = 0.05),
+  y = 1,
+  adjUsr = 0.5
+)
+
+n <- length(p_ratio0_cb$data()[["x"]])
+
+rect(
+  xleft = p_ratio0_cb$data()[["x"]][-n], 
+  ybottom = p_ratio0_cb$data()[["y"]] - adj, 
+  xright = p_ratio0_cb$data()[["x"]][-1],
+  ytop = p_ratio0_cb$data()[["y"]] + adj,
+  col = rgb(
+    red = 0.27, 
+    green = 0.50, 
+    blue = 0.70, 
+    alpha = p_ratio0_cb$data()[["x"]]
+  ),
+  border = NA
+)
+
+Axis(p_ratio0_cb, side = 3, labelAdj = 0.2)
+
+mtext(
+    text = "zero catch ratio color bar",
+    side = 1, 
+    line = -0.2, 
+    cex = 0.75, 
+    col = "grey50", 
+    font = 3
+  )
+
+# clean up
+rm(col_tile, xtks, ytks, adj, n)
+
+```
+
+```{r display-record-count}
+
+# knitr::kable(as.data.frame())
+
+xtabs(
+  formula = Ratio0[, "Recs"] ~ Month + CYear,
+  data = cc_cpue,
+  sparse = FALSE,
+)
+
+```
+
+```{r plot-ratio0, eval=FALSE, fig.height=5, fig.asp=1}
+
+# View(cc_cpue$Ratio0)
+
+# range(cc_cpue[["Ratio0"]][, "Ratio"])
+
+layout(mat = matrix(data = 1:12, ncol = 3, byrow = TRUE))
+
+par(mar = c(2, 2, 0.5, 0.5), oma = c(2.5, 2.5, 0.5, 0.5))
+
+test <- lapply(1:12, FUN = function(m) {
+  
+  par(mar = c(0.25, 0.25, 0.25, 0.25))
+  
+  b <- cc_cpue[["Month"]] %in% m
+  
+  p <- Plot(
+    x = cc_cpue[["CYear"]],
+    y = 0:1, 
+    adjUsr = 0.5
+  )
+  
+  p$grid(xRng = FALSE)
+  
+  i <- match(
+    Reduce(f = `:`, x = range(cc_cpue[["CYear"]])),
+    table = p$data()[["x"]][b]
+  )
+  
+  alpha <- cc_cpue[["Ratio0"]][b, "Recs"] / max(cc_cpue[["Ratio0"]][, "Recs"])
+  clr <- rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = sqrt(alpha))
+  
+  points(
+    x = p$data()[["x"]][b][i],
+    y = cc_cpue[["Ratio0"]][b, "Ratio"][i],
+    type = "p",
+    pch = 21,
+    col = clr,
+    # bg = "steelblue",
+    bg = clr,
+    cex = 1.5
+  )
+  
+  points(
+    x = p$data()[["x"]][b][i],
+    y = cc_cpue[["Ratio0"]][b, "Ratio"][i],
+    type = "c",
+    col = "grey65",
+    lty = 2
+  )
+  
+  text(
+    x = p[["xrng"]][[1]],
+    y = p[["yrng"]][[2]],
+    labels = month.abb[m], 
+    col = "grey50", 
+    cex = 1, 
+    font = 3, 
+    adj = c(-0.1, 0.7)
+  )
+  
+  if (m %in% 10:12)
+    Axis(p, side = 1, labelAdj = 0.3, interval = 2, cexAxis = 1.2)
+  if (m %% 3 == 1)
+    Axis(p, side = 2, labelAdj = 0.4, cexAxis = 1.2)
+})
+# end lapply
+
+```

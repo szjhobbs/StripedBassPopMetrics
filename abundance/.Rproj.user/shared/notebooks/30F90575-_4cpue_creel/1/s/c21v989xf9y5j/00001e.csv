@@ -1,0 +1,7 @@
+"0",""
+"0","# range(cc_cpue[[""Ratio0""]][, ""Ratio""])"
+"0",""
+"0","lo <- layout(mat = 2:1, heights = c(0.15, 0.85))"
+"0","par(mar = c(1.5, 1.5, 0.5, 0.5), oma = c(1.5, 1.5, 0.5, 0.5))"
+"0",""
+"0","p_ratio0 <- Plot(data = cc_cpue, x = CYear, y = Month, adjUsr = 1)"

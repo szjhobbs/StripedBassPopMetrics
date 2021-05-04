@@ -1,0 +1,1147 @@
+---
+
+---
+
+<!--
+
+file contains all M, C, & R data for N = (M * C) / R, where N is abundance
+
+Steps to Final N:
+
+y = estimate year
+i = 1-4 (annual updates), with y0 the initial year
+
+M = marks (tags) from y0
+C = catch (total caught)
+R = recaptured tags
+
+bc = bay creel
+rc = river creel
+tg = tagging
+
+upd = update
+
+y0  est0: M(y0) | Cbc(y0) | Rbc(y0)
+y+i upd1: M(y0) | Cbc(y0) + Crc(y+i) | Rbc(y0) + Rrc(y+i)
+    upd2: M(y0) | Cbc(y0) + Crc(y+i) + Ctg(y+i) | Rbc(y0) + Rrc(y+i) + Rtg(y+i)
+    upd3: M(y0) | Cbc(y0) + Crc(y+i) + Ctg(y+i) + Cbc(y+i) | Rbc(y0) + Rrc(y+i) + Rtg(y+i) + Rbc(y+i)
+    
+note: with upd1 in y+i=1 Cbc(y0) & Rbc(y0) values are deleted for age-3 fish only (due to growth rate variability)
+
+-->
+
+### Road Map (for lack of better title)
+
+Historically, Bay Creel data provided the first abundance estimate for tagging year `y0`. Each year after `y0` for up to four years (`y0` + 4), estimates were updated with river creel, tagging, and bay creel data (in that order). Estimates were considered final in year `y0` + 4 after the final bay creel update.
+
+Estimates are age and sex stratified, with ages 8 and up being grouped as 8 plus (denoted `8p`). Typically, fewer older fish are caught, and older fish are more challenging to age, thus the reasons for grouping. We calculate annual estimates for adult Striped Bass (ages 3-8p) and total (the sum of ages 3-8p). We use the equations below for the estimate and variance (Ricker 1975).
+
+$$\hat{N}{_{y+i}}_t=\frac{M_y\times (\sum_{i=0}^{4}C_t+1)}{\sum_{i=0}^{4}R_t+1}$$
+
+$$Var(\hat{N_y})=\frac{\hat{N_y}^2\times(C-R)}{(C+1)\times(R+2)}$$
+
+$$CI(\hat{N_y})=\hat{N_y}\pm 1.96\times\sqrt{Var(\hat{N_y})}$$
+
+The number of marks (or tags; *M*) from year `y0` is not affected with each update. However, *C* (catch) and *R* (recaptures) are cumulative[^1] with each update. Updates are age specific, as depicted in the matrix below. The double-x (xx) denotes which ages are updated (i.e., cumulative). For example, after `y0` ages 7 and 8p are not updated (i.e., `y0` estimates for these age groups are final). The matrix is strictly applied even in the absence of `y0 + 1|2|3|4` (e.g., no tagging in 2006 so an update for `y0` 2005 using 2007 tagging data would follow the `y0 + 2` column).
+
+Age | y0 | y0 + 1 | y0 + 2 | y0 + 3 | y0 + 4 |
+--- | -- | ------ | ------ | ------ | ------ |
+ 3  | xx |   xx   |   xx   |   xx   |   xx   |
+ 4  | xx |   xx   |   xx   |   xx   |        |
+ 5  | xx |   xx   |   xx   |        |        |
+ 6  | xx |   xx   |        |        |        |
+ 7  | xx |        |        |        |        |
+ 8p | xx |        |        |        |        | 
+
+To further demonstrate the estimate-update process, we created the diagram below. *Note*: `upd3` carries over to the next update year (i.e., cumulative).
+
++ y0
+  - est0: M(y) & Cbc(y) & Rbc(y)  
++ y+*i*
+  - upd1: M(y) & Cbc(y) + Crc(y+*i*) & Rbc(y) + Rrc(y+*i*)  
+  - upd2: M(y) & Cbc(y) + Crc(y+*i*) + Ctg(y+*i*) & Rbc(y) + Rrc(y+*i*) + Rtg(y+*i*)  
+  - upd3: M(y) & Cbc(y) + Crc(y+*i*) + Ctg(y+*i*) + Cbc(y+*i*) & Rbc(y) + Rrc(y+*i*) + Rtg(y+*i*) + Rbc(y+*i*)  
+
+where...  
+y | y0 = estimate year  
+*i* = 1-4 (annual updates)  
+
+M = marks (tags) from `y`  
+C = catch (total caught)  
+R = recaptured tags  
+
+bc = bay creel  
+rc = river creel  
+tg = tagging  
+
+est = estimate  
+upd = update  
+
+[1:] first update excepted: age-3 *C* and *R* values from Bay Creel estimate `y` are replaced with River Creel update `y + 1` due to variations in growth
+
+Around 2010, CDFW for various reasons developed a backlog of un-aged scale samples and discontinued the Creel Census. As discussed previously, we applied an age-length key to "age-less" sampling years. No Census data meant only one update (tagging) per year and no initial estimate from Bay Creel data.
+
+### Components (*M* | *C* | *R*)
+
+For ease of calculating annual estimates, the next steps configure data to a matrix format of age (3-8p) x year, where year is five columns `y0` through `y0 + 4`. We do this for each release year in variable `catch`.
+
+#### Creel *C*
+
+Here we add field `BayC` to variable (dataframe) `catch`. `BayC` houses catch data for `y0` and `y0 + 1|2|3|4`. When no data are available (e.g., no tagging for year `y0`), NAs are returned. Otherwise, *C* data are returned for the appropriate ages given the update year. An example for year 2002 is shown below (males). Note the zeroes (0) for ages & years where update is not warranted. 
+
+```{r bay-creel-c}
+
+catch$BayC <- lapply(catch[["RelYear"]], function(y) {
+    
+  # for desired ages
+  a <- c(3:7, "8p")
+  n <- length(a)
+    
+  # for looping below
+  sex <- c(m = 'm', f = 'f')
+  Y <- 0:4 # initial --> update years
+    
+  lapply(sex, FUN = function(s) {
+    out <- vapply(Y, FUN = function(i) {
+      y <- as.character(y + i)
+      # to update only the appropriate ages
+      if (i > 0) a <- a[-c(1:i, n)]
+      CC <- creel[["BayC"]][[y]][a, s]
+      if (is.null(CC)) {
+        # e <- vector(mode = "numeric", length = n)
+        e <- rep(NA, times = n)
+        e <- setNames(object = e, nm = c(3:7, "8p"))
+        return(e)
+      }
+      
+      # to replace non-updated ages with zeroes
+      if (length(a) < n) CC[(length(a) + 1):n] <- 0
+      CC
+    }, FUN.VALUE = numeric(6L))
+    # end vapply
+      
+    dimnames(out)[[2]] <- y + Y
+    out
+  })
+  # end inner lapply
+  
+  # works - do not delete ********************************
+  # y <- as.character(y)
+  # a <- c(3:7, "8p")
+  #
+  # d <- catch[["AgeCom"]][[y]][["m"]]
+  #
+  # # # [, "Ml"]
+  # # b <- dimnames(d)[[1]] %in% "2"
+  #
+  # M <- d[a, "Ml"]
+  #
+  # C <- creel[["BayC"]][[y]][a, "m"]
+  #
+  # R <- creel[["Recaps"]][[y]][["bay"]][a, y, "m"]
+  #
+  # A <- (M * (C + 1)) / (R + 1)
+  #
+  # c(A, Tot = sum(A))
+})
+# end outer lapply
+
+```
+
+```{r bay-creel-c-ex}
+
+# 30 =  year 2002
+catch[["BayC"]][[30]][["m"]]
+
+```
+
+Process is identical to bay creel *C*, except here we add field `RvrC`. An example for `y0` 2003 is provided below (females).
+
+```{r rvr-creel-c}
+
+catch$RvrC <- lapply(catch[["RelYear"]], function(y) {
+  
+  a <- c(3:7, "8p")
+  # nms <- a
+  n <- length(a)
+    
+  # d <- catch[["AgeCom"]][[as.character(y)]][["m"]]
+  # M <- d[a, "Ml"]
+    
+  # for looping below
+  sex <- c(m = 'm', f = 'f')
+  Y <- 0:4
+    
+  lapply(sex, FUN = function(s) {
+    out <- vapply(Y, FUN = function(i) {
+      y <- as.character(y + i)
+      if (i > 0) a <- a[-c(1:i, n)]
+      CC <- creel[["RvrC"]][[y]][a, s]
+      if (is.null(CC)) {
+        # e <- vector(mode = "numeric", length = n)
+        e <- rep(NA, times = n)
+        e <- setNames(object = e, nm = c(3:7, "8p"))
+        return(e)
+      }
+      if (length(a) < n) CC[(length(a) + 1):n] <- 0
+      CC
+    }, FUN.VALUE = numeric(6L))
+    # end vapply
+    
+    dimnames(out)[[2]] <- y + Y
+    out
+  })
+  # end inner lapply
+})
+# end outer lapply
+
+```
+
+```{r rvr-creel-c-ex}
+
+# 31 = year 2003
+catch[["RvrC"]][[31]][["f"]]
+
+```
+
+#### Creel *R*
+
+Like Creel *C*, we need creel recaptures in the appropriate format (i.e., age x year). Here we add to `catch` fields `BayR` and `RvrR` using data in `creel[["Recaps"]]` to get appropriate *R*. The process is the same for both creel types. From inward to outward, `creel[["Recaps"]]` is nested as array (age, year, sex) --> creel type (bay | river) --> estimate year (`y0`). 'year' in array is release year making `y0` also the recapture year. An example using river creel 2003, females is displayed below. *Note*: `BayR` and `RvrR` select only ages 3-8p.
+
+```{r bay-r}
+
+# creel[["Recaps"]][[y]][["bay"]][a, y, "m"]
+
+# catch$BayR <- lapply(catch[["RelYear"]], function(y) {
+#     
+#     a <- c(3:7, "8p")
+#     n <- length(a)
+#     
+#     # for looping below
+#     sex <- c(m = 'm', f = 'f')
+#     
+#     Y <- 0:4
+#     
+#     y0 <- as.character(y)
+#     
+#     lapply(sex, FUN = function(s) {
+#         
+#         out <- vapply(Y, FUN = function(i) {
+#             y <- as.character(y - i)
+#             # if (i > 0) a <- a[-c(1:i, n)]
+#             if (i > 0) a <- a[-c((n - i):n)]
+#             
+#             dn <- dimnames(creel[["Recaps"]][[y0]][["bay"]][a, , s])[[2]]
+#             
+#             if (!y %in% dn) {
+#                 e <- vector(mode = "numeric", length = n)
+#                 e <- setNames(object = e, nm = c(3:7, "8p"))
+#                 return(e)
+#             }
+#             
+#             RR <- creel[["Recaps"]][[y0]][["bay"]][a, y, s]
+#             
+#             if (length(a) < n) RR[(length(a) + 1):n] <- 0
+#             RR
+#             
+#         }, FUN.VALUE = numeric(6L))
+#         # end vapply
+#         
+#         dimnames(out)[[2]] <- y - Y
+#         out
+#     })
+#     # end inner lapply
+# })
+# end outer lapply
+
+
+catch$BayR <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  # res loops through all recaps from creel census to get appropriate recaptures
+  # from mark-recapture release year (RelYear)
+  res <- lapply(creel[["Recaps"]], function(r) {
+    
+    # loops through each year of creel recaps
+    out <- lapply(r, FUN = function(cc) {
+      
+      # to get release year (y) from recaptured data (`cc` is an array with
+      # `ages` x `release year` x `sex`)
+      yr <- as.numeric(dimnames(cc)[["Year"]])
+      b <- yr %in% y
+      
+      a <- c(3:7, "8p")
+      
+      # if there are no matches with `y` then return NULL (b should only sum to
+      # 1, as there should be no more then 1 release year within recapture data
+      # but may want to put a check on this - 10-Jun-2020)
+      # if (ncol(o) == 0) return(NULL)
+      # if (all(!b)) return(NULL)
+      
+      if (all(!b)) {
+        
+        na <- matrix(
+          data = 0,
+          ncol = 2,
+          nrow = length(a),
+          dimnames = list(Aged = a, Sex = c('m', 'f'))
+        )
+        
+        return(as.table(na))
+      }
+      
+      # return only the appropriate year with only ages 3-8+
+      cc[c(3:7, "8p"), b, ]
+    })
+    # end inner lapply
+    
+    # output has both bay & river creel data, but for this purpose we will work
+    # with one creel type at a time
+    out[["bay"]]
+  })
+  # end inner lapply
+
+  # to loop through males & females
+  lapply(c(m = 'm', f = 'f'), FUN = function(s) {
+    
+    # used in Map to decided which year is the initial estimate & which years
+    # are updates
+    index <- as.numeric(names(res)) - y
+    
+    # to loop through index & res in order to set to 0 or NA ages not included
+    # in updated estimates post the initial estimate
+    out <- Map(f = function(i, x) {
+      
+      if (is.null(x)) return(NULL)
+      
+      if (!i %in% 0:4) return(NULL)
+        
+      # to preserve ages as names post call to switch()
+      nms <- names(x[, s])
+        
+      # to hold results of switch()
+      r <- NA
+      
+      # variable to be repeated within switch(); likely will be 0 but could
+      # decide to use NA
+      v <- 0L
+      # v <- NA_integer_
+       
+      # because after the initial estimate is made, not every age is updated,
+      # for example in year + 1 (where year is the first year of the estimate)
+      # only ages 3-6 are updated (thus 1:4; 1:3; 1:2, etc); default (i.e.,
+      # anything greater then 4 years post initial estimate) is to use age 3
+      # only but it really doesn't matter as anything beyond year + 4 is not
+      # updated (10-Jun-2020)
+      switch (
+        EXPR = as.character(i),
+        `0` = r <- x[, s],
+        `1` = r <- c(x[1:4, s], rep(v, times = 2)),
+        `2` = r <- c(x[1:3, s], rep(v, times = 3)),
+        `3` = r <- c(x[1:2, s], rep(v, times = 4)),
+        `4` = r <- c(x[1, s], rep(v, times = 5)),
+        r <- c(x[1, s], rep(v, times = 5))
+      )
+        
+      # to preserve ages as names
+      names(r) <- nms
+      r
+      
+    }, index, res)
+    # end Map
+    
+    names(out) <- names(res)
+    
+    # to output neatly as a matrix with ages x years (initial & updates)
+    # do.call(what = cbind, args = lapply(res, function(x) x[, s]))
+    do.call(what = cbind, args = out)
+  })
+  # end final inner lapply
+})
+# end outer lapply
+
+```
+
+```{r rvr-r}
+
+# creel[["Recaps"]][[y]][["bay"]][a, y, "m"]
+
+# catch$RvrR <- lapply(catch[["RelYear"]], function(y) {
+#     
+#     a <- c(3:7, "8p")
+#     n <- length(a)
+#     
+#     # for looping below
+#     sex <- c(m = 'm', f = 'f')
+#     
+#     Y <- 0:4
+#     
+#     y0 <- as.character(y)
+#     
+#     lapply(sex, FUN = function(s) {
+#         
+#         out <- vapply(Y, FUN = function(i) {
+#             y <- as.character(y - i)
+#             # if (i > 0) a <- a[-c(1:i, n)]
+#             if (i > 0) a <- a[-c((n - i):n)]
+#             
+#             dn <- dimnames(creel[["Recaps"]][[y0]][["rvr"]][a, , s])[[2]]
+#             
+#             if (!y %in% dn) {
+#                 e <- vector(mode = "numeric", length = n)
+#                 e <- setNames(object = e, nm = c(3:7, "8p"))
+#                 return(e)
+#             }
+#             
+#             RR <- creel[["Recaps"]][[y0]][["rvr"]][a, y, s]
+#             
+#             if (length(a) < n) RR[(length(a) + 1):n] <- 0
+#             RR
+#             
+#         }, FUN.VALUE = numeric(6L))
+#         # end vapply
+#         
+#         dimnames(out)[[2]] <- y - Y
+#         out
+#     })
+#     # end inner lapply
+# })
+# # end outer lapply
+
+catch$RvrR <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  # res loops through all recaps from creel census to get appropriate recaptures
+  # from mark-recapture release year (RelYear)
+  res <- lapply(creel[["Recaps"]], function(r) {
+    
+    # loops through each year of creel recaps
+    out <- lapply(r, FUN = function(cc) {
+      
+      # to get release year (y) from recaptured data (`cc` is an array with
+      # `ages` x `release year` x `sex`)
+      yr <- as.numeric(dimnames(cc)[["Year"]])
+      b <- yr %in% y
+      
+      a <- c(3:7, "8p")
+      
+      # if there are no matches with `y` then return NULL (b should only sum to
+      # 1, as there should be no more then 1 release year within recapture data
+      # but may want to put a check on this - 10-Jun-2020)
+      # if (ncol(o) == 0) return(NULL)
+      # if (all(!b)) return(NULL)
+      if (all(!b)) {
+        
+        na <- matrix(
+          data = 0,
+          ncol = 2,
+          nrow = length(a),
+          dimnames = list(Aged = a, Sex = c('m', 'f'))
+        )
+        
+        return(as.table(na))
+      }
+      
+      # return only the appropriate year with only ages 3-8+
+      cc[a, b, ]
+    })
+    # end inner lapply
+    
+    # output has both bay & river creel data, but for this purpose we will work
+    # with one creel type at a time
+    out[["rvr"]]
+  })
+  # end inner lapply
+
+  # to loop through males & females
+  lapply(c(m = 'm', f = 'f'), FUN = function(s) {
+    
+    # used in Map to decided which year is the initial estimate & which years
+    # are updates
+    index <- as.numeric(names(res)) - y
+    
+    # return(index)
+    # if (!index %in% 0:4) return(NULL)
+    
+    # to loop through index & res in order to set to 0 or NA ages not included
+    # in updated estimates post the initial estimate
+    out <- Map(f = function(i, x) {
+      
+      # if (!i %in% 0:4) return(NULL)
+      if (is.null(x)) return(NULL)
+      if (!i %in% 0:4) return(NULL)
+      # if (!i %in% 0:4) return(rep(NA, times = 6))
+      # if (is.null(x)) return(rep(NA, times = length(x[, s])))
+        
+      # to preserve ages as names post call to switch()
+      nms <- names(x[, s])
+        
+      # to hold results of switch()
+      r <- NA
+      
+      # variable to be repeated within switch(); likely will be 0 but could
+      # decide to use NA
+      v <- 0L
+      # v <- NA_integer_
+       
+      # because after the initial estimate is made, not every age is updated,
+      # for example in year + 1 (where year is the first year of the estimate)
+      # only ages 3-6 are updated (thus 1:4; 1:3; 1:2, etc); default (i.e.,
+      # anything greater then 4 years post initial estimate) is to use age 3
+      # only but it really doesn't matter as anything beyond year + 4 is not
+      # updated (10-Jun-2020)
+      switch (
+        EXPR = as.character(i),
+        `0` = r <- x[, s],
+        `1` = r <- c(x[1:4, s], rep(v, times = 2)),
+        `2` = r <- c(x[1:3, s], rep(v, times = 3)),
+        `3` = r <- c(x[1:2, s], rep(v, times = 4)),
+        `4` = r <- c(x[1, s], rep(v, times = 5)),
+        # r <- c(x[1, s], rep(v, times = 5))
+        r <- c(rep(NA, times = 6))
+      )
+        
+      # to preserve ages as names
+      names(r) <- nms
+      r
+      
+    }, index, res)
+    # end Map
+    
+    names(out) <- names(res)
+    
+    # to output neatly as a matrix with ages x years (initial & updates)
+    # do.call(what = cbind, args = lapply(res, function(x) x[, s]))
+    do.call(what = cbind, args = out)
+    
+  })
+  # end final inner lapply
+})
+# end outer lapply
+
+```
+
+Sampling year in this example is 2003. The one age-5 from 2002 was tagged in 2002 recaptured in 2003. Years 1998, 2000, & 2003 are present in the table --- despite all 0s --- because male fish were recaptured in these years.
+
+```{r creel-r-example}
+
+creel[["Recaps"]][[26]][["rvr"]][, , "f"]
+
+```
+
+#### Tagging *C*
+
+We add `TagC` to variable (dataframe) `catch`. This step uses `catch[["AgeCom]]`, each element of which is a table (age x tagging action). *C* is simply the table row sums (using `base::rowSums()`) less any fish deemed sub-legal (column `S`). The desired age or ages are selected depending upon the update year. *C* is set to 0 for non-updated ages.
+
+Because tagging data has been used as "update" and not initial estimate (like bay creel), `TagC` does not get *C* for `y0`, only `y0 + 1|2|3|4`. We get `y0` *C* in `InSeasonTagC` (see `catch[["InSeasonTagC"]]`). An example of `TagC` (2002) for both males & females is shown below. We did not tag Striped Bass in 2006.
+
+```{r tagging-c}
+
+catch$TagC <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  # to find first, second, third, & fourth updates for each release year
+  ydiff <- catch[["RelYear"]] - y
+  
+  # for subsetting the appropriate release year & AgeCom
+  index <- which(ydiff %in% 1:4)
+  
+  # so output is named with the appropriate update year
+  names(index) <- catch[["RelYear"]][index]
+  
+  # to loop through sex (male & female)
+  lapply(c(m = 'm', f = 'f'), FUN = function(s) {
+    
+    # to loop through indices to get agecom data for release year + 1|2|3|4
+    vapply(index, FUN = function(i) {
+      if (length(i) == 0) return(NULL)
+      r <- rowSums(catch[["AgeCom"]][[i]][[s]])
+      sl <- catch[["AgeCom"]][[i]][[s]][, "S"]
+      
+      # to remove sub-legals (very few) but just to be consistent
+      r <- r - sl
+      nms <- names(r)
+      
+      # variable to be repeated within switch(); likely will be 0 but could decide
+      # to use NA
+      v <- 0L
+      # v <- NA_integer_
+      
+      a <- as.character(4:7)
+      
+      # select ages based on year difference up to 4 years difference from
+      # release year
+      switch (
+        EXPR = as.character(ydiff[i]),
+        `1` = r <- c(r[a], rep(v, times = 2)),
+        `2` = r <- c(r[a[-1]], rep(v, times = 3)),
+        `3` = r <- c(r[a[-(1:2)]], rep(v, times = 4)),
+        `4` = r <- c(r[a[-(1:3)]], rep(v, times = 5)),
+        r <- c(r[a[-(1:3)]], rep(v, times = 5))
+      )
+      
+      # to preserve ages (as names) for final output
+      names(r) <- c(3:7, "8p")
+      r
+    }, FUN.VALUE = numeric(6L))
+    # end vapply
+  })
+  # end inner lapply
+})
+# end outer lapply
+
+catch$InSeasonTagC <- lapply(catch[["AgeCom"]], FUN = function(y) {
+  a <- c(3:7, "8p")
+  vapply(y, FUN = function(s) {
+    r <- rowSums(s[a, ])
+    r - s[a, "S"]
+  }, FUN.VALUE = numeric(length(a)))
+})
+
+```
+
+```{r tagging-c-example}
+
+catch[["TagC"]][[30]]
+
+```
+
+#### Tagging *R*
+
+The protocol has been to use release (tagging) sex for recaptured (*R*) sex and release year age + number years post release for recaptured age (i.e., not the age derived from the recaptured fish scale sample). To comply with the protocol, we created a dataframe of only tag releases with the desired fields (e.g., sex; age; tag number; see variable `tag_release`). We then used this dataframe to match (via tag number) all electronically available records of recaptured fish.
+
+```{r tag-release}
+
+# chunk creates tag release dataframe for getting tagging recaptures in next
+# chunk; using this approach (as opposed to Tagging$StripedBass) as Sex & most
+# ages have been apportioned in catch$AgeAssign (11-Jun-2020)
+
+tag_release <- Map(f = function(y, a) {
+  
+  # for the convenience of adding field for Sex
+  out <- Map(f = function(s, d) {
+    d$Sex <- s
+    d$Sex <- factor(d[["Sex"]], levels = c('m', 'f'))
+    d
+  }, names(a), a)
+  
+  # to combind into data frame for eventual output
+  out <- do.call(what = rbind, args = out)
+  
+  # TagNum CapMethod RelFL TagActionF RelAge0 LenCat Aged Sex
+  # get only desired fields & only fish that were tagged
+  out <- subset(
+    out,
+    subset = TagActionF %in% c("Ml", "Ms"),
+    select = c(TagNum, Sex, RelFL, LenCat, Aged)
+  )
+  
+  # for convenience of having release year
+  out$RelYear <- y
+  out
+  
+}, catch[["RelYear"]], catch[["AgeAssign"]])
+
+tag_release <- do.call(what = rbind, args = tag_release)
+rownames(tag_release) <- NULL
+
+# for desired age range used to group in factoring below
+rng_age <- range(tag_release[["Aged"]], na.rm = TRUE)
+min7 <- rng_age[[1]]:7
+nplus8 <- length(8:rng_age[[2]])
+
+lbls <- c(min7, rep("8p", times = nplus8))
+exclude <- NA # `factor()` default
+
+# to include NA as `Un` if any
+if (any(is.na(tag_release[["Aged"]]))) {
+  lbls <- c(lbls, "Un")
+  exclude <- NULL # will include NA
+}
+
+# for grouping ages as min --> 7 and 8p (>= age-8), with Un for unknown age
+tag_release$Aged <- factor(
+  tag_release[["Aged"]],
+  levels = sort(unique(tag_release[["Aged"]]), na.last = TRUE),
+  labels = lbls,
+  exclude = exclude
+)
+
+# chunk clean up
+rm(rng_age, min7, nplus8, lbls, exclude)
+
+```
+
+To variable (dataframe) `catch`, we added field `TagR`. We looped through each release year and sex to get recaptured fish (i.e., tagging action 2) from `catch[["AgeAssign"]]`. Matching tag number on tag number, we retrieved the desired data from `tag_release`, and then produced an age frequency using `base::table()`, the results in `TagR`. An example is displayed below (males, release year 2002). The years (columns) are recapture years for release year 2002. For 2006, the 0s are merely a placeholder, as we did not tag Striped Bass that year.
+
+```{r tagging-r}
+
+catch$TagR <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  sex <- c(m = 'm', f = 'f')
+  ry <- setNames(object = y + 0:4, nm = y + 0:4)
+  
+  lapply(sex, FUN = function(s) {
+    
+    a <- c(3:7, "8p")
+    n <- length(a)
+    
+    vapply(ry, FUN = function(y0) {
+      dd <- catch[["AgeAssign"]][[as.character(y0)]][[s]]
+      if (is.null(dd)) return(rep(0L, times = n))
+      dd <- subset(dd, subset = TagActionF %in% 'R2')
+      i <- match(dd[["TagNum"]], table = tag_release[["TagNum"]])
+      o <- tag_release[i, ]
+      b <- o[["RelYear"]] %in% y
+      r <- table(o[b, "Aged"])
+      
+      # variable to be repeated within switch(); likely will be 0 but could
+      # decide to use NA
+      v <- 0L
+      # v <- NA_integer_
+      
+      # so we can replace with 0s or NAs frequency for ages not updated
+      # according to update years 1-4 (0s likely preferred as it makes summing
+      # easier)
+      switch (
+        EXPR = as.character(y0 - y),
+        `0` = r <- r[a],
+        `1` = r <- c(r[a[1:4]], rep(v, times = 2)),
+        `2` = r <- c(r[a[1:3]], rep(v, times = 3)),
+        `3` = r <- c(r[a[1:2]], rep(v, times = 4)),
+        `4` = r <- c(r[a[1]], rep(v, times = 5)),
+        r <- c(r[a[1]], rep(v, times = 5))
+      )
+      
+      r
+      
+    }, FUN.VALUE = numeric(n))
+    # end vapply
+  })
+  # end inner lapply
+})
+# end outer lapply
+
+# clean up
+# rm(tag_release)
+
+```
+
+```{r tagging-r-example}
+
+# 30 = year 2002
+
+catch[["TagR"]][[30]][["m"]]
+
+```
+
+```{r testing, eval=FALSE}
+
+# for checking tagging action columns within AgeCom
+# test <- t(vapply(catch$AgeCom, FUN = function(a) {
+#   vapply(c(m = "m", f = "f"), FUN = function(s) {
+#     sum(a[[s]][, "S"])
+#   }, FUN.VALUE = numeric(1L))
+# }, FUN.VALUE = numeric(2L)))
+
+# test <- vapply(catch$AgeCom, FUN = function(a) {
+#   vapply(a, FUN = dim, FUN.VALUE = numeric(2L))
+# }, FUN.VALUE = numeric(4L))
+
+```
+
+#### Tagging *M*
+
+From `catch[["AgeCom"]]`, we simply retrive `Ml`, or mark (tag) count for legal-sized fish. We add field `TagM` to `catch` for convenience with the following steps. An example below displays marks by age for 2019 release year females.
+
+```{r tagging-m}
+
+catch$TagM <- lapply(catch[["AgeCom"]], function(d) {
+  
+  # for desired ages
+  a <- c(3:7, "8p")
+  
+  # count of tags by sex (s)
+  lapply(d, FUN = function(s) {
+    s[a, "Ml", drop = FALSE]
+  })
+  # end inner lapply
+})
+# end outer lapply
+
+```
+
+```{r tagging-m-example}
+
+catch[["TagM"]][["2019"]][["f"]]
+
+```
+
+```{r naming-lists}
+
+# to help with Map function below, not all lists within catch are named & it's
+# best (easiest) to call the list by year rather than index
+catch[] <- lapply(catch, FUN = function(x) {
+  if (is.list(x) && is.null(names(x)))
+    names(x) <- catch[["RelYear"]]
+  x
+})
+
+```
+
+### Cumulative *C* & *R*
+
+Both *C* and *R* are cumulative starting with the initial estimate in `y0` through the final update in `y0 + 4`. Here we assemble the appropriate *C* and *R* for each estimate year (i.e., `catch["RelYear"]`). From `catch` we use variables `BayC`, `RvrC`, `TagC`, `BayR`, `RvrR`, and `TagR`, collectively bringing *C*s & *R*s into list columns `CumC` and `CumR`. The list column is configure as (inward to outward) 5-element list (`y0` through `y0 + 4`) --> 2-element list (male & female) --> 45-element list (each release year; will change with further release years). See example below (*C*, male, 2002 release year).
+
+*Notes*:
+
+(1) `U` stands for update (e.g., `URvr` update using River Creel)
+(2) In the absence of Bay Creel data, we used `InSeasonTagC` so at least some *C* would be available for an estimate.
+(3) We have not employed within season recaptures, as per protocol. (VERIFY)
+
+```{r cumulative-C}
+
+catch$CumC <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  # for looping through sex
+  sex <- c(m = 'm', f = 'f')
+  
+  lapply(sex, FUN = function(s) {
+    
+    # to get data from desired year
+    yi <- setNames(object = y + 0:4, nm = y + 0:4)
+    
+    # to hold the carry over C after each year's update
+    co <- 0L
+    
+    lapply(yi, FUN = function(i) {
+      
+      # for subsetting bay creel on initial year
+      ic <- as.character(y)
+      bcy0 <- catch[["BayC"]][[ic]][[s]][, ic]
+      
+      age3_to_zero <- TRUE
+      
+      # to provide some C in the absence the initial bay creel C; also allows
+      # for keeping age-3 value that typically is set to 0 when bay creel within
+      # release year is available
+      if (all(is.na(bcy0))) {
+        bcy0 <- catch[["InSeasonTagC"]][[ic]][, s]
+        age3_to_zero <- FALSE
+      }
+      
+      # for the first year's estimate only bay creel is needed
+      if (i == y) return(bcy0)
+      
+      # for indexing to follow (to get update year's data)
+      i <- as.character(i)
+      
+      # because we did not tag every year we need to set 0s for years in which
+      # we did not tag, could be NA, but that make the math more challenging
+      nms <- dimnames(catch[["TagC"]][[ic]][[s]])[[2]]
+      # tg <- rep(0, times = 6L)
+      tg <- 0L
+      if (i %in% nms)
+        tg <- catch[["TagC"]][[ic]][[s]][, i]
+      
+      # to get river (rc) & bay (bc) creel data
+      rc <- catch[["RvrC"]][[ic]][[s]][, i]
+      bc <- catch[["BayC"]][[ic]][[s]][, i]
+      
+      # for the ease of calculations below
+      rc[is.na(rc)] <- 0
+      bc[is.na(bc)] <- 0
+      
+      # if (all(is.na(rc))) rc
+      
+      # because age3 fish from bay creel (estimate year) are not included
+      if (age3_to_zero) bcy0[["3"]] <- 0L
+      
+      # output 
+      out <- cbind(
+        URvr = co + bcy0 + rc,
+        UTag = co + bcy0 + rc + tg,
+        UBay = co + bcy0 + rc + tg + bc
+      )
+      
+      # to update carry over with each of the 4 annual updates
+      co <<- out[, "UBay"] - bcy0
+      
+      out
+    })
+    # end second inner lapply
+  })
+  # end first inner lapply
+})
+# end outer lapply
+
+```
+
+```{r cumulative-C-example}
+
+catch[["CumC"]][[30]][["m"]]
+
+```
+
+```{r cumulative-R}
+
+catch$CumR <- lapply(catch[["RelYear"]], FUN = function(y) {
+  
+  # for looping through sex
+  sex <- c(m = 'm', f = 'f')
+  
+  lapply(sex, FUN = function(s) {
+    
+    # to get data from desired year
+    yi <- setNames(object = y + 0:4, nm = y + 0:4)
+    
+    # to hold the carry over C after each year's update
+    co <- 0L
+    
+    lapply(yi, FUN = function(i) {
+      
+      # for subsetting bay creel on initial year
+      ic <- as.character(y)
+      
+      bcy0 <- 0L
+      age3_to_zero <- TRUE
+      
+      if (ic %in% dimnames(catch[["BayR"]][[ic]][[s]])[[2]])
+        bcy0 <- catch[["BayR"]][[ic]][[s]][, ic]
+      
+      # for the first year's estimate only bay creel is needed
+      if (i == y) return(bcy0)
+      
+      # for indexing to follow (to get update year's data)
+      i <- as.character(i)
+      
+      # because we did not tag every year we need to set 0s for years in which
+      # we did not tag, could be NA, but that make the math more challenging
+      # nms <- dimnames(catch[["TagR"]][[ic]][[s]])[[2]]
+      # tg <- rep(0, times = 6L)
+      tg <- 0L
+      if (i %in% dimnames(catch[["TagR"]][[ic]][[s]])[[2]])
+        tg <- catch[["TagR"]][[ic]][[s]][, i]
+      
+      # to get river (rc) & bay (bc) creel data
+      rc <- 0L
+      if (i %in% dimnames(catch[["RvrR"]][[ic]][[s]])[[2]])
+        rc <- catch[["RvrR"]][[ic]][[s]][, i]
+      
+      bc <- 0L
+      if (i %in% dimnames(catch[["BayR"]][[ic]][[s]])[[2]])
+        bc <- catch[["BayR"]][[ic]][[s]][, i]
+      
+      # because age3 fish from bay creel (estimate year) are not included
+      # bcy0[["3"]] <- 0L
+      # bcy0[[1]] <- 0L
+      if (age3_to_zero) bcy0[[1]] <- 0L
+      
+      # output 
+      out <- cbind(
+        URvr = co + bcy0 + rc,
+        UTag = co + bcy0 + rc + tg,
+        UBay = co + bcy0 + rc + tg + bc
+      )
+      
+      # to update carry over with each of the 4 annual updates
+      co <<- out[, "UBay"] - bcy0
+      
+      out
+    })
+    # end second inner lapply
+  })
+  # end first inner lapply
+})
+# end outer lapply
+
+```
+
+### Abundance
+
+Here we combine *C* and *R* with *M* (marked) to calculate abundance and abundance variance. We supply these variables to `sportfish::PetersenEst()` to get cumulative age & sex stratified estimates. For convenience of plotting, we create variables `AbunTot` and `AbunLowUpBounds` within dataframe `catch`.
+
+```{r abundance}
+
+# to calculate Petersen estimates using M, C, R
+catch$Abundance <- Map(f = function(mm, cc, rr) {
+  
+  # for looping through sex
+  sex <- c(m = 'm', f = 'f')
+  
+  lapply(sex, FUN = function(s) {
+    
+    b <- identical(x = names(cc[[s]]), y = names(rr[[s]]))
+    if (!b) {
+      msg <- paste(
+        "Cannot calculate abundance.",
+        "`C` & `R` lists names not identical."
+      )
+      stop(msg, call. = FALSE)
+    }
+    
+    Map(f = function(CC, RR) {
+      PetersenEst(mm[[s]][, "Ml"], CC = CC, RR = RR)
+    }, CC = cc[[s]], RR = rr[[s]])
+  })
+  # end inner lapply
+  
+}, mm = catch[["TagM"]], cc = catch[["CumC"]], rr = catch[["CumR"]])
+# end Map
+
+```
+
+```{r abundance-total}
+
+catch$AbunTot <- lapply(catch[["Abundance"]], function(x) {
+  
+  # to get male age-3 abundance for replacing age-3 females per protocol
+  m <- x[["m"]]
+  
+  Map(f = function(s, l) {
+    Map(f = function(yn, y) {
+
+      # because for females we replace age-3 values with male age-3 values
+      if (s %in% "f") {
+        
+        lapply(c("N", "Var", "CI", "SE"), FUN = function(v) {
+          
+          mm <- m[[yn]][[v]]
+          
+          if (is.matrix(y[[v]]) && is.matrix(mm))
+            y[[v]]["3", ] <<- mm["3", ]
+          else
+            y[[v]][["3"]] <<- mm[["3"]]
+        })
+        # end lapply
+      }
+      # end if
+      
+      # convert to matrix for colSums because initial bay creel estimate is not
+      # a matrix
+      nn <- as.matrix(y[["N"]])
+      
+      # to get total abundance estimate
+      nnn <- colSums(nn)
+      
+      # the total variance | standard error | confidence interval
+      citot <- sqrt(colSums(as.matrix(y[["Var"]]))) * y[["Z"]]
+      
+      # output
+      rbind(
+        NTot = nnn,
+        NLeg = nnn - (0.5 * nn["3", ]),
+        # Age3 = nn["3", ],
+        # CITot = sqrt(colSums(as.matrix(y[["Var"]]))) * y[["Z"]]
+        CITot = citot,
+        NTotL = nnn - citot,
+        NTotU = nnn + citot
+      )
+      
+    }, yn = names(l), y = l)
+    # end second Map
+    
+  }, s = names(x), l = x)
+  # end first Map
+})
+# end lapply
+
+# for the convenience of plotting lower & upper bounds for 2010-2019
+catch$AbunLowUpBounds <- t(vapply(catch[["AbunTot"]], FUN = function(y) {
+  
+  # to loop through male & female list
+  sex <- c(m = 'm', f = 'f')
+  
+  r <- vapply(sex, FUN = function(s) {
+    
+    # to get the final update given the estimate year; getting for now the lower
+    # & upper limits for plotting - not going to plot the point estimate
+    l <- y[[s]]
+    yy <- max(names(l))
+    l[[yy]][c("NTotL", "NTotU"), "UBay"]
+    
+  }, FUN.VALUE = numeric(2L))
+  # end inner vapply
+  
+  # for the convenience of having a named vector as output
+  dn <- dimnames(r)
+  nm <- paste(
+    rep(dn[[1]], times = 2),
+    rep(dn[[2]], each = 2), 
+    sep = "_"
+  )
+  
+  # convert r (a 2x2 matrix to vector length = 4) & name all 4 elements
+  r <- c(r)
+  names(r) <- nm
+  r
+  
+}, FUN.VALUE = numeric(4L)))
+# end outer vapply
+
+```
+
+Historically, we know 95% confidence limits for \hat(N) can be very broad. So much so the lower end becomes negative, the "impossible" value an artifact of the variance equation. This is especially true for females, where catch & recapture numbers tend to be low. Below we display annual (2010-2019) confidence limits for male and female Striped Bass. The point estimate lies somewhere in the middle, but the true estimate is anywhere within the bars. *Note*: some lower bounds are negative and calculating confidence intervals using another method (e.g., log-linear) might be advised.
+
+```{r plot-abund-limits}
+
+p_abund <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["AbunLowUpBounds"]], 
+  subset = catch[["RelYear"]] > 2009
+)
+
+p_abund$grid(xRng = TRUE)
+
+# for desired format to plot (cols 1-2 male lower upper, 3-4 female)
+ydat <- matrix(p_abund$data()[["y"]], ncol = 4)
+colm <- rgb(red = 0.99, green = 0.54, blue = 0, alpha = 0.75)
+colf <- rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = 0.75)
+
+# to plot males
+segments(
+  x0 = p_abund$data()[["x"]] - 0.1,
+  y0 = ydat[, 1],
+  y1 = ydat[, 2],
+  lwd = 10,
+  lend = 1,
+  col = colm
+)
+
+# to plot females
+segments(
+  x0 = p_abund$data()[["x"]] + 0.1,
+  y0 = ydat[, 3],
+  y1 = ydat[, 4],
+  lwd = 10,
+  lend = 1,
+  col = colf
+)
+
+# tick labels & axis label
+Axis(p_abund, side = 1, labelAdj = 0.3, interval = 2)
+yaxis <- Axis(p_abund, side = 2, labelAdj = 0.4, format = TRUE)
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = yaxis$AxisTitle(var = "Abundance"), side = 2, line = 1.2)
+
+# to add legend for male|female distinction
+legend(
+  x = p_abund[["xrng"]][[2]],
+  y = p_abund[["yrng"]][[2]],
+  legend = c("\u2642", "\u2640"),
+  # legend = c(NA, NA),
+  # pch = c("\u2642", "\u2640"), 
+  # col = c(colm, colf),
+  # pt.cex = 2,
+  border = NA,
+  text.col = c(colm, colf),
+  text.width = 0.05,
+  text.font = 2,
+  cex = 2,
+  ncol = 1,
+  xjust = 0.45,
+  bty = "n",
+  xpd = TRUE
+)
+
+# chunk clean up
+rm(ydat, colm, colf, yaxis)
+
+```

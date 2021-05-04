@@ -1,0 +1,5 @@
+"0",""
+"0","# chunk apportions fish with sex = 'u' as either 'm' or 'f' based on sex ratio;"
+"0","# because catch[[""Data""]] is a list, we must use lapply"
+"0","catch$Data <- lapply(catch[[""Data""]], FUN = ApportionSex, sex = RelSex0)"
+"0",""

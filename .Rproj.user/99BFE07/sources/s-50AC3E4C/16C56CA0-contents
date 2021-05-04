@@ -1,0 +1,32 @@
+
+
+vapply(catch[["AgeAssign"]], FUN = function(y) {
+  vapply(y, FUN = function(s) {
+    sum(is.na(s[["Aged"]]))
+  }, FUN.VALUE = numeric(1L))
+}, FUN.VALUE = numeric(2L))
+
+lapply(catch[["AgeAssign"]], FUN = function(y) {
+  lapply(y, FUN = function(s) {
+    b <- is.na(s[["Aged"]])
+    table(s[b, "RelFL"], useNA = "ifany")
+  })
+})
+
+lapply(catch[["AgeAssign"]], FUN = function(y) {
+  lapply(y, FUN = function(s) {
+    b1 <- is.na(s[["Aged"]])
+    b2 <- is.na(s[["RelFL"]]) | s[["RelFL"]] < 22
+    table(b1, b2, useNA = "ifany", dnn = c("A", "L"))
+  })
+})
+
+# Tue Jun 23 12:57:53 2020 ------------------------------
+
+
+lapply(creel$BayAgeCom, FUN = function(y) {
+  
+  lapply(y, FUN = rowSums, na.rm = TRUE)
+  
+})
+

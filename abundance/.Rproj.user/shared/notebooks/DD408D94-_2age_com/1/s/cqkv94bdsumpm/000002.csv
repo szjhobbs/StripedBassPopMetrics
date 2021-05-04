@@ -1,0 +1,8 @@
+"0",""
+"0","# just to check - uncomment as needed"
+"0","# with(data = Tagging[[""CreelCensus""]], expr = {"
+"0","#   table(Year, Year.1, useNA = ""ifany"")"
+"0","census_count <- aggregate("
+"0","  formula = CatchSum ~ CYear + Month + Type,"
+"0","  data = cc_split,"
+"0","  FUN = sum"

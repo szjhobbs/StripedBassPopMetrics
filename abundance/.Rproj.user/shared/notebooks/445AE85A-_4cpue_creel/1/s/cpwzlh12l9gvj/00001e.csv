@@ -1,0 +1,4 @@
+"0",""
+"0","# clean up"
+"0","rm(col_tile, xtks, ytks, adj, n)"
+"0",""

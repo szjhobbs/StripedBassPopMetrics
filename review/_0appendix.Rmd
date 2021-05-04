@@ -1,0 +1,1238 @@
+---
+
+---
+
+```{r setup0, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+<!-- Sampling Frequency -->
+<!-- Sampling Period (why chosen) -->
+<!-- Sampling Locations -->
+<!-- Describe how sampling has changed over time -->
+<!-- Plot coordinates?? -->
+
+```{r tag-values}
+
+# lkp_striper$tagvalue
+# names(lkp_striper$tagvalue)
+
+tag_values <- with(data = Tagging[["StripedBass"]], expr = {
+  
+  b <- TagAction %in% 1 | is.na(TagAction)
+  
+  tv <- factor(TagValue[b], levels = names(lkp_striper[["tagvalue"]]))
+  
+  table(RelYear[b], tv, useNA = "ifany", dnn = NULL)
+  
+})
+
+```
+
+```{r rel-cond-annual, eval=FALSE}
+
+# lkp_striper$condition
+
+with(data = Tagging[["StripedBass"]], expr = {
+  
+  cnd <- lkp_striper[["condition"]]
+  
+  b <- TagAction %in% 1 | is.na(TagAction)
+  
+  rc <- factor(RelCond[b], levels = names(cnd), labels = cnd)
+  
+  table(RelYear[b], rc, useNA = "ifany", dnn = NULL)
+  
+})
+
+```
+
+```{r effort}
+
+# table(Tagging$Effort$CapMethod, useNA = "ifany")
+
+effort <- Split(
+  data = Tagging[["Effort"]],
+  # subset = ,
+  vars = -RelYear,
+  splitVars = RelYear
+)
+
+# for desired data type
+effort$RelYear <- as.numeric(effort[["RelYear"]])
+
+```
+
+```{r effort-hours}
+
+effort$Hours <- t(vapply(effort[["Data"]], FUN = function(d) {
+  
+  # for correct number of values in inner vapply & name assignment
+  n <- 6L
+  
+  # so both gear types are summarized
+  d$CapMethod <- factor(
+    d[["CapMethod"]],
+    levels = c(2, 1),
+    labels = c("FT", "GN")
+  )
+  
+  # split on gear type (capture method)
+  s <- Split(data = d, splitVars = CapMethod)
+  
+  r <- vapply(s[["Data"]], FUN = function(dd) {
+    
+    o <- EffortSb(
+      data = dd,
+      sTime = StartTime,
+      eTime = EndTime,
+      netNum = DriftTrap
+    )
+    
+    # unlists & removes NetCountDup field
+    c(o, recursive = TRUE)[-7]
+    
+  }, FUN.VALUE = numeric(n))
+  
+  # creates names for unlisted `r`
+  dn <- dimnames(r)
+  r <- c(r, recursive = TRUE)
+  names(r) <- paste(dn[[1]], rep(dn[[2]], each = n), sep = "")
+  r
+  
+}, FUN.VALUE = numeric(12L)))
+
+```
+
+```{r catch}
+
+# for splitting to ensure each capture method present in every release year
+Tagging$StripedBass <- within(data = Tagging[["StripedBass"]], expr = {
+  CapMethod2 <- factor(CapMethod, levels = c(2, 1), labels = c("FT", "GN"))
+})
+
+# for quick check to confirm above
+# with(data = Tagging[["StripedBass"]], expr = {
+#   table(CapMethod, CapMethod2, useNA = "ifany")
+# })
+
+catch <- Split(
+  data = Tagging[["StripedBass"]],
+  # subset = ,
+  vars = -c(RelYear, CapMethod2),
+  splitVars = c(RelYear, CapMethod2)
+)
+
+# for desired data type
+catch$RelYear <- as.numeric(catch[["RelYear"]])
+
+# for code built using `CapMethod` not `CapMethod2`
+colnames(catch) <- sub(pattern = "[0-9]", replacement = "", x = colnames(catch))
+
+```
+
+```{r catch-count}
+
+catch$Count <- t(vapply(catch[["Data"]], FUN = function(d) {
+  b <- d[["TagAction"]] %in% 1 | is.na(d[["TagAction"]])
+  # sum(d[b, "Count"])
+  c(Tagged = sum(d[b, "Count"]), Total = sum(d[["Count"]]))
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+```{r catch-days-loc}
+
+catch$DaysLoc <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  d$RelLoc <- factor(d[["RelLoc"]], levels = 1:16)
+  s <- Split(data = d, vars = RelDate, splitVars = RelLoc)
+  vapply(s[["Data"]], FUN = function(x) {
+    length(unique(x[["RelDate"]]))
+  }, FUN.VALUE = numeric(1L))
+  
+}, FUN.VALUE = numeric(16L)))
+
+```
+
+```{r sex-ratio}
+
+sex_ratio_overall <- with(data = Tagging[["StripedBass"]], expr = {
+  SexRatio(lkp_striper$sex(RelSex))
+})
+
+catch$SexRatio <- t(vapply(catch[["Data"]], FUN = function(d) {
+  s <- lkp_striper$sex(d[["RelSex"]], asFactor = TRUE)
+  r <- c(SexRatio(s), recursive = TRUE)
+  names(r) <- sub(pattern = "\\.", replacement = "", x = names(r))
+  r
+}, FUN.VALUE = numeric(6L)))
+
+```
+
+```{r rel-cond}
+
+# release condition for disc tagged fish only
+
+catch$RelCond <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  cnd <- lkp_striper[["condition"]]
+  
+  b <- d[["TagAction"]] %in% 1 | is.na(d[["TagAction"]])
+  
+  rc <- factor(
+    d[b, "RelCond"],
+    levels = c(names(cnd), NA),
+    labels = c(cnd, "unk"),
+    exclude = NULL
+  )
+  
+  table(rc, dnn = NULL)
+  
+}, FUN.VALUE = numeric(3L)))
+
+```
+
+<!-- catch per date per trap (for CPUE) -->
+
+```{r catch-date-trap}
+
+catch$DateDriftTrap <- lapply(catch[["Data"]], FUN = function(d) {
+  
+  if (nrow(d) == 0) return(NULL)
+  
+  d$DriftTrap[is.na(d[["DriftTrap"]])] <- 0
+  d$TagAction[is.na(d[["TagAction"]])] <- "1"
+  
+  dd <- Split(
+    data = d,
+    vars = c(TagAction, Count),
+    splitVars = c(RelDate, DriftTrap)
+  )
+  
+  dd$RelDate <- as.POSIXct(dd[["RelDate"]])
+  
+  dd$Total <- vapply(dd[["Data"]], FUN = function(ddd) {
+    sum(ddd[["Count"]])
+  }, FUN.VALUE = numeric(1))
+
+  # dd[c("RelDate", "DriftTrap", "Total")]
+  dd$Data <- NULL
+  
+  dd
+})
+
+```
+
+```{r catch-date}
+
+catch$PerDate <- lapply(catch[["Data"]], FUN = function(d) {
+  
+  if (nrow(d) == 0) return(NULL)
+  
+  dd <- Split(data = d, vars = Count, splitVars = RelDate)
+  
+  dd$RelDate <- as.POSIXct(dd[["RelDate"]])
+  
+  dd$Total <- vapply(dd[["Data"]], FUN = function(ddd) {
+    sum(ddd[["Count"]])
+  }, FUN.VALUE = numeric(1))
+  
+  dd$Data <- NULL
+  
+  dd
+})
+
+```
+
+```{r flen-stats, warning=FALSE}
+
+catch$LenStats <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  b <- !d[["RelFLFlag"]]
+  
+  c(DescStat(d[b, "RelFL"]), FLFlag = sum(!b), recursive = TRUE)
+  
+}, FUN.VALUE = numeric(8L)))
+
+
+catch$LenStatsTagged <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  b <- !d[["RelFLFlag"]] & (is.na(d[["TagAction"]]) | d[["TagAction"]] %in% '1')
+  
+  c(DescStat(d[b, "RelFL"]), FLFlag = sum(!b), recursive = TRUE)
+  
+}, FUN.VALUE = numeric(8L)))
+
+catch$LenStatsSex <- lapply(catch[["Data"]], FUN = function(d) {
+  
+  # b <- d[["RelFLFlag"]]
+  
+  d$RelSex <- lkp_striper$sex(d[["RelSex"]], asFactor = TRUE)
+  
+  dd <- Split(
+    data = d,
+    subset = !RelFLFlag,
+    vars = RelFL,
+    splitVars = RelSex
+  )
+  
+  t(vapply(dd[["Data"]], FUN = function(x) {
+    c(DescStat(x[["RelFL"]]), recursive = TRUE)
+  }, FUN.VALUE = numeric(7L)))[c('M', 'F'), ]
+  
+})
+
+# ******************************************************************************
+# might need to limit lower value to compare accross years since measuring
+# criteria has changed (and we began tagging sublegals starting ~2010)
+
+# t(vapply(catch[["Data"]], FUN = function(d) {
+#   
+#   b <- d[["RelFL"]] >= 42
+#   
+#   c(DescStat(d[b, "RelFL"]), LT42 = sum(!b), recursive = TRUE)
+#   
+# }, FUN.VALUE = numeric(8L)))
+# ******************************************************************************
+
+```
+
+```{r age-stats, warning=FALSE}
+
+catch$AgeStats <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  b <- d[["RelAge"]] >= 2
+  
+  c(DescStat(d[b, "RelAge"]), recursive = TRUE)
+  
+}, FUN.VALUE = numeric(7L)))
+
+
+catch$AgeStatsSex <- lapply(catch[["Data"]], FUN = function(d) {
+  
+  # b <- d[["RelFLFlag"]]
+  
+  d$RelSex <- lkp_striper$sex(d[["RelSex"]], asFactor = TRUE)
+  
+  dd <- Split(
+    data = d,
+    subset = RelAge >= 2,
+    vars = RelAge,
+    splitVars = RelSex
+  )
+  
+  t(vapply(dd[["Data"]], FUN = function(x) {
+    c(DescStat(x[["RelAge"]]), recursive = TRUE)
+  }, FUN.VALUE = numeric(7L)))[c('M', 'F'), ]
+  
+})
+
+```
+
+<!-- length & age frequency (overall & by sex) -->
+<!-- length at age (VBGM) -->
+
+## Effort
+
+Effort data prior to mid-1990 are not available electronically. As time allows, we are entering these data into our current database. Below we summarized currently electronically available data.
+
+#### Days Fished
+
+Annual number of field days for fyke traps (`FT`) hovered around 20 (figure below, top panel). We fished gill nets (`GN`) only one day in the 2010s.
+
+```{r plot-sb-days-fished}
+
+par(mar = c(0.25, 1.9, 0.25, 0.9), oma = c(2, 1, 0.5, 0.45))
+mat <- matrix(data = c(1:2), nrow = 2, ncol = 1, byrow = TRUE)
+lo <- layout(mat = mat, widths = 1, heights = c(1, 1))
+# layout.show(n = lo)
+
+days_sampled <- c("DaysFT", "DaysGN")
+
+# range(effort[["Hours"]][, days_sampled])
+
+p_sb_days <- lapply(days_sampled, FUN = function(v) {
+  
+  p <- Plot(
+    x = effort[["RelYear"]],
+    y = effort[["Hours"]][, v],
+    adjUsr = 0.5
+  )
+  
+  points(
+    p,
+    col = grey(0.05, alpha = 0.5),
+    type = "h",
+    lend = 1,
+    lwd = 15,
+    grid = TRUE,
+    xRng = TRUE
+  )
+  
+  # add y-axis tick labels
+  Axis(p, side = 2, labelAdj = 0.4)
+  
+  lbl <- strsplit(v, split = "Days")[[1]][2]
+  xx <- p[["xrng"]][[2]] * 1.0005
+  
+  # need text() to use srt parameter, not allowed in mtext()
+  text(x = xx, y = 20, labels = lbl, srt = -90, xpd = TRUE)
+  
+  p
+})
+
+Axis(p_sb_days[[1]], side = 1, labelAdj = 0.3, interval = 5, offset = 1)
+mtext(text = "Year", side = 1, line = 1.20)
+
+layout(mat = 1)
+mtext(text = "Days sampled", side = 2, line = 1.5)
+
+# section clean up
+rm(p_sb_days, lo, mat, days_sampled)
+
+```
+
+#### Hours Fished
+
+<!-- what is point being plotted; explain data -->
+
+We calculated average hours fished (&pm;SD) given available effort data (figure below). Since roughly 2000, concerns over ESA catch limited fishing fyke traps (`FT`) to no more than 24 hours between checks. On average, gill nets (`GN`) fished between 30 and 55 minutes per set (0.5 to 0.9 hours).
+
+```{r plot-sb-hours-fished}
+
+par(mar = c(0.25, 1.9, 0.25, 0.9), oma = c(2, 1, 0.5, 0.45))
+mat <- matrix(data = c(1:2), nrow = 2, ncol = 1, byrow = TRUE)
+lo <- layout(mat = mat, widths = 1, heights = c(1, 1))
+# layout.show(n = lo)
+
+daily_avg <- list(
+  c(Avg = "HoursAvgFT", Var = "HoursVarFT", nm = "FT"),
+  c(Avg = "HoursAvgGN", Var = "HoursVarGN", nm = "GN")
+)
+
+p_daily_hours <- lapply(daily_avg, FUN = function(v) {
+  
+  p <- Plot(
+    x = effort[["RelYear"]],
+    y = effort[["Hours"]][, v[["Avg"]]],
+    yerr = sqrt(effort[["Hours"]][, v[["Var"]]]),
+    adjUsr = 0.5
+  )
+  
+  lines(p, col = "grey30", lwd = 1.75, lend = 1, xRng = TRUE)
+  
+  points(
+    p,
+    type = "p",
+    pch = 21,
+    col = "white",
+    # lwd = 1,
+    bg = "grey30",
+    cex = 1,
+    grid = FALSE
+  )
+  
+  # add y-axis tick labels
+  Axis(p, side = 2, labelAdj = 0.4)
+  
+  # lbl <- strsplit(v, split = "Days")[[1]][2]
+  xx <- p[["xrng"]][[2]] * 1.0005
+  yy <- median(p[["yrng"]])
+  
+  # need text() to use srt parameter, not allowed in mtext()
+  text(x = xx, y = yy, labels = v[["nm"]], srt = -90, xpd = TRUE)
+  
+  p
+})
+
+Axis(p_daily_hours[[1]], side = 1, labelAdj = 0.3, interval = 5, offset = 1)
+mtext(text = "Year", side = 1, line = 1.20)
+
+layout(mat = 1)
+mtext(text = "Hours", side = 2, line = 1.5)
+
+# section clean up
+rm(p_daily_hours, lo, mat, daily_avg)
+
+```
+
+## Catch
+
+```{r sb-tagged}
+
+# for ease of getting proportion tagged by capture method
+tagged <- matrix(
+  catch[["Count"]][, "Tagged"],
+  ncol = 2,
+  dimnames = list(NULL, c("FT", "GN"))
+)
+
+```
+
+```{r test-code-delete, eval=FALSE}
+
+# p_catch <- Plot(
+#   x = catch[["RelYear"]],
+#   y = catch[["Count"]],
+#   subset = catch[["CapMethod"]] %in% "GN"
+# )
+# 
+# p_catch$grid(xRng = TRUE)
+# 
+# points(
+#   x = p_catch$data()[["x"]],
+#   y = catch[["Count"]][eval(p_catch$subetted), "Total"],
+#   type = "h", lwd = 5, lend = 1
+# )
+# 
+# points(
+#   x = p_catch$data()[["x"]],
+#   y = catch[["Count"]][eval(p_catch$subetted), "Tagged"],
+#   type = "p", col = 2, lend = 1
+# )
+
+```
+
+```{r plot-tagged, eval=FALSE, fig.asp=1, fig.width=7}
+
+# TODO: plot needs some massaging (05-Feb-2020)
+# TODO: see alternate plot below - liking that one better
+
+par(mar = c(0.25, 1.9, 0.25, 0.9), oma = c(2, 1, 0.5, 0.45))
+mat <- matrix(data = c(1:3), nrow = 3, ncol = 1, byrow = TRUE)
+lo <- layout(mat = mat, widths = 1, heights = c(0.5, 0.8, 0.8))
+# layout.show(n = lo)
+
+p_ratio_tagged <- Plot(
+  x = range(catch[["RelYear"]]),
+  y = c(0, 1),
+  adjUsr = 0.5
+)
+
+# for grid & denoting y-axis midpoint
+p_ratio_tagged$grid(xRng = TRUE)
+abline(h = 0.5, col = "steelblue")
+
+# display ratio of tagged via gill net (GN)
+points(
+  x = unique(catch[["RelYear"]]),
+  y = prop.table(tagged, margin = 1)[, "GN"],
+  col = "orange3"
+)
+
+Axis(p_ratio_tagged, side = 2, labelAdj = 0.3)
+
+plot_num_tagged <- lapply(c("FT", "GN"), FUN = function(v) {
+  
+  b <- catch[["CapMethod"]] %in% v
+  
+  p <- Plot(
+    # x = catch[b, "RelYear"],
+    # y = catch[b, "Count"],
+    x = range(catch[["RelYear"]]),
+    y = range(catch[["Count"]]),
+    adjUsr = 0.5
+  )
+  
+  p$grid(xRng = TRUE)
+  
+  points(
+    # x = p$data()[["x"]],
+    x = catch[b, "RelYear"],
+    y = catch[["Count"]][b, "Tagged"],
+    type = "h",
+    col = grey(0.05, alpha = 0.5),
+    lend = 1,
+    lwd = 8,
+  )
+  
+  # add y-axis tick labels
+  pp <- Axis(p, side = 2, labelAdj = 0.4, format = TRUE)
+  
+  xx <- p[["xrng"]][[2]] * 1.001
+  yy <- median(p[["yrng"]])
+  
+  # need text() to use srt parameter, not allowed in mtext()
+  text(x = xx, y = yy, labels = v, srt = -90, xpd = TRUE)
+  
+  p$AT <- pp$AxisTitle
+  p
+})
+
+# to show year on define x-axis ticks
+Axis(
+  plot_num_tagged[[1]],
+  side = 1,
+  labelAdj = 0.3,
+  interval = 5,
+  offset = 1
+)
+
+# to show x-axis label
+mtext(text = "Year", side = 1, line = 1.20)
+
+# to reset layout
+layout(mat = 1)
+
+# to show y-axis lable
+mtext(
+  text = plot_num_tagged[[1]]$AT(var = "Total tagged"),
+  side = 2,
+  line = 1.3
+)
+
+# section clean up
+rm(lo, mat, plot_num_tagged, p_ratio_tagged, tagged)
+
+```
+
+Up unitl 2000 and for years when both gear types were fished, gill net (`GN`) contribution to total tagged was between 60% and 80% (figure below, top panel). As a general trend, the annual number of Striped Bass tagged declined.
+
+```{r plot-tagged-alt}
+
+# a possibility
+# plot(unique(catch$RelYear), rowSums(tagged), type = "h")
+
+# for adjusting colors using rgb()
+# https://www.rapidtables.com/web/color/RGB_Color.html
+# c(255, 140, 0) / 256
+# c(70, 130, 180) / 256
+
+# for bar colors in plotting num tagged by capture method
+lkp_col <- c(
+  FT = rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = 0.5),
+  GN = rgb(red = 0.99, green = 0.54, blue = 0, alpha = 0.4)
+)
+
+par(mar = c(0.25, 1.9, 1.0, 0.4), oma = c(2, 1, 0.5, 0.1))
+mat <- matrix(data = c(1:2), nrow = 2, ncol = 1, byrow = TRUE)
+lo <- layout(mat = mat, heights = c(0.65, 1))
+# layout.show(n = lo)
+
+p_ratio_tagged <- Plot(
+  x = range(catch[["RelYear"]]),
+  y = c(0, 1),
+  adjUsr = 0.5
+)
+
+# for grid & denoting y-axis midpoint
+p_ratio_tagged$grid(xRng = TRUE)
+# abline(h = 0.5, col = "steelblue")
+abline(h = 0.5, col = grey(level = 0.5, alpha = 0.5), lwd = 3)
+
+# display ratio of tagged via gill net (GN)
+points(
+  x = unique(catch[["RelYear"]]),
+  y = prop.table(tagged, margin = 1)[, "GN"],
+  cex = 0.75,
+  pch = 1,
+  col = "grey30"
+)
+
+Axis(
+  p_ratio_tagged,
+  side = 2,
+  labelAdj = 0.3
+)
+
+mtext(text = "GN fraction", side = 2, line = 1.6)
+
+# to minimize gap between plots
+par(mar = c(0.25, 1.9, 0.25, 0.4))
+
+# for empty plot based on annual number tagged
+p_tagged <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["Count"]][, "Tagged"],
+  adjUsr = 0.5
+)
+
+# add bars representing number tagged, shaded by capture method
+points(
+  p_tagged,
+  type = "h",
+  col = lkp_col[catch[["CapMethod"]]],
+  lwd = 8,
+  xRng = TRUE
+)
+
+# to show year on define x-axis ticks
+Axis(
+  p_tagged,
+  side = 1,
+  labelAdj = 0.3,
+  interval = 5,
+  offset = 1
+)
+
+# for formatting of yaxis 10^3
+yaxis_tagged <- Axis(
+  p_tagged,
+  side = 2,
+  labelAdj = 0.3,
+  format = TRUE
+)
+
+# to show x-axis label
+mtext(text = "Year", side = 1, line = 1.20)
+
+# to show y-axis lable
+mtext(
+  text = yaxis_tagged$AxisTitle(var = "Total tagged"),
+  side = 2,
+  line = 1.3
+)
+
+# to reset plot window for legend placement
+layout(mat = 1)
+
+legend(
+  x = p_tagged[["xrng"]][2],
+  y = p_tagged[["yrng"]][2] * 1.07,
+  legend = names(lkp_col),
+  fill = lkp_col,
+  border = NA,
+  bty = "n",
+  ncol = 2,
+  xjust = 1,
+  xpd = TRUE
+)
+
+# section clean up
+rm(lo, mat, yaxis_tagged, lkp_col)
+
+```
+
+#### Sex Ratio
+
+We assigned sex based on the presence (&male;) or absence (&female;) of milt. We calculated sex ratio as a fration of total caught (including unassigned; figure below). This is by no means a comprehensive look at sex ratio and more in-depth analyses are required, but it does demonstrate some shift over time. *Note*: n=17 Striped Bass for 2011 Gill net operations (one day of sampling).
+
+```{r plot-sex-ratio}
+
+lkp_col_sex_ratio <- c(
+  FT = rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = 0.9),
+  GN = rgb(red = 0.99, green = 0.54, blue = 0, alpha = 0.9)
+)
+
+par(mar = c(0.5, 2.0, 1, 0.45), oma = c(2, 1, 0.5, 0.2))
+
+p_sex_ratio <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["SexRatio"]][, c("PropM", "PropF")], adjUsr = 0.5
+)
+
+p_sex_ratio$grid(xRng = T)
+
+points(
+  x = catch[["RelYear"]],
+  y = catch[["SexRatio"]][, "PropM"],
+  col = lkp_col_sex_ratio[catch[["CapMethod"]]],
+  pch = "\u2642"
+)
+
+points(
+  x = catch[["RelYear"]],
+  y = catch[["SexRatio"]][, "PropF"],
+  col = lkp_col_sex_ratio[catch[["CapMethod"]]],
+  pch = "\u2640"
+)
+
+Axis(p_sex_ratio, side = 1, labelAdj = 0.2, interval = 5, offset = 1)
+Axis(p_sex_ratio, side = 2, labelAdj = 0.4)
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Ratio", side = 2, line = 1.9)
+
+legend(
+  x = p_sex_ratio[["xrng"]][2],
+  y = p_sex_ratio[["yrng"]][2] * 1.10,
+  legend = names(lkp_col_sex_ratio),
+  fill = lkp_col_sex_ratio,
+  border = NA,
+  bty = "n",
+  ncol = 2,
+  xjust = 1,
+  xpd = TRUE
+)
+
+```
+
+## Tag Returns
+
+A major component of this mark-recapture study is angler tag returns. Every angler who returns a disc tag receives a commendation card and reward (separately and if applicable). A commendation card thanks the angler for contributing to the "betterment of fishing in California" and provides a bit of information about the fish (e.g., date and location tagged).
+
+We tend to process angler tag returns in batches (i.e., several to half dozen at a time). Rewards are paid within six to eight weeks of processing. Total annual payments vary but for the last 10 years mostly have been between \$1,000 and \$2,000 (table below). Year represents period in which the tag was processed, not return or release year.
+
+*Note1*: We only have tag processing data-time from ~October 2011 to present. Tags prior to which were processed but have no associated date-time stamp.
+
+*Note2*: Data for 2011 may not include all tags processed that year.
+
+*Note3*: We are still processing tags returned in 2020.
+
+<!-- address $10 tag -->
+<!-- address why so few in 2016 -->
+
+```{r returns-relyear}
+
+returns <- Split(
+  data = Tagging[["TagReturns"]],
+  subset = ,
+  vars = c(
+    RelDate, RelLoc, CapMethod, TagNum,
+    RelVal, RetDate, FlaggedRetDate, RetYear
+  ),
+  splitVars = RelYear
+)
+
+# for desired data type
+returns$RelYear <- as.numeric(returns[["RelYear"]])
+
+```
+
+```{r returns-var}
+
+returns$Count <- vapply(
+  returns[["Data"]],
+  FUN = nrow,
+  FUN.VALUE = numeric(1L),
+  USE.NAMES = FALSE
+)
+
+returns$FirstYear <- vapply(returns[["Data"]], FUN = function(d) {
+  sum(d[["RetYear"]] %in% 1)
+}, FUN.VALUE = numeric(1L), USE.NAMES = FALSE)
+
+returns$Payment <- vapply(returns[["Data"]], FUN = function(d) {
+  b <- grepl(pattern = "\\d", x = d[["RelVal"]])
+  sum(as.numeric(d[b, "RelVal"]))
+}, FUN.VALUE = numeric(1L), USE.NAMES = FALSE)
+
+returns$PaymentFY <- vapply(returns[["Data"]], FUN = function(d) {
+  b <- grepl(pattern = "\\d", x = d[["RelVal"]]) &
+    d[["RetYear"]] %in% 1
+  sum(as.numeric(d[b, "RelVal"]))
+}, FUN.VALUE = numeric(1L), USE.NAMES = FALSE)
+
+returns$ByRelVal <- t(vapply(returns[["Data"]], FUN = function(d) {
+  lvls <- names(lkp_striper[["tagvalue"]])
+  table(factor(d[["RelVal"]], levels = lvls))
+}, FUN.VALUE = numeric(8L)))
+
+returns$FirstYearNR <- vapply(returns[["Data"]], FUN = function(d) {
+  sum(d[["RetYear"]] %in% 1 & grepl(pattern = "\\D", x = d[["RelVal"]]))
+}, FUN.VALUE = numeric(1L), USE.NAMES = FALSE)
+
+```
+
+```{r testing, eval=FALSE}
+
+# a possibility for output (maybe heatmap)
+
+lapply(returns[["Data"]], FUN = function(d) {
+  y <- format(d[["RetDate"]], format = "%Y")
+  table(as.numeric(y), useNA = "always")
+})
+
+```
+
+```{r reward-payment}
+
+reward <- factor(
+  Tagging[["RewardPayment"]][["Reward"]],
+  levels = c("10", "20", "50", "100", "Payment"),
+  labels = c(paste0("$", c("10", "20", "50", "100")), "Payment")
+)
+
+tbx <- xtabs(
+  formula = NumProc ~ ProcYear + reward,
+  data = Tagging[["RewardPayment"]]
+)
+
+dol <- aggregate(
+  formula = Payment ~ ProcYear,
+  data = Tagging[["RewardPayment"]],
+  FUN = sum
+)
+
+tbx[, "Payment"] <- paste("$", (format(dol[["Payment"]], big.mark = ",")))
+
+knitr::kable(tbx, format = "markdown", align = "r")
+
+# section clean up
+rm(dol, tbx, reward)
+
+```
+
+We classify tag returns based on a tag's time at large. That is, a tag returned within a year of release (i.e., tagging) is a first-year return, a tag returned between one and two years of release is a second-year return, and so on. Primarly, we use first-year and second-year returns for some metrics to mitigate against bias (e.g., angler didn't report or recall capture date; angler returned the tag many years after capture).
+
+We calculate return rate simply by dividing number returned by number released. Below, we display first-year non-reward return rate. Here we do not correct for non-response --- a process that uses reward return rates --- but the trend is markedly downward over the study's history.
+
+```{r plot-return-rate}
+
+# ******************************************************************************
+# both are equivalent but subset does require parens around `TagAction`; both
+# get the number of non-reward tags released per year
+
+# aggregate(
+#   formula = Count ~ RelYear,
+#   # formula = Count ~ RelYear + TagValue,
+#   data = Tagging$StripedBass,
+#   FUN = sum,
+#   subset = (TagAction %in% 1 | is.na(TagAction)) &
+#     TagValue %in% c("NM", "NR")
+# )[["Count"]]
+# 
+# unname(rowSums(tag_values[, c("NM", "NR")]))
+# ******************************************************************************
+
+# for annual count of non-reward tags released
+non_reward_tags_rel <- unname(rowSums(tag_values[, c("NM", "NR")]))
+
+par(mar = c(0.5, 2.3, 0.25, 0.45), oma = c(2, 1, 0.5, 0.45))
+
+# annual return rate
+p_return_rate <- Plot(
+  x = returns[["RelYear"]],
+  y = returns[["FirstYearNR"]] / non_reward_tags_rel,
+  adjUsr = 0.5
+)
+
+points(p_return_rate, xRng = TRUE)
+# points(p_return_rate, xRng = FALSE)
+Axis(p_return_rate, side = 1, labelAdj = 0.3, interval = 5, offset = 1)
+# Axis(p_return_rate, side = 1, labelAdj = 0.3, offset = 1)
+Axis(p_return_rate, side = 2, labelAdj = 0.4)
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Return rate", side = 2, line = 2.2)
+
+# section clean up
+rm(non_reward_tags_rel)
+
+```
+
+```{r plot-tagged-sub, eval=FALSE}
+
+# plots fork length of fish tagged color coded to denote legal & sub-legal
+
+par(mar = c(2.5, 2.3, 1.2, 0.45), oma = c(1.1, 1, 0.5, 0.45))
+
+lkp_col <- c(
+  `TRUE` = rgb(red = 0, green = 0.35, blue = 0.65, alpha = 0.1),
+  `FALSE` = rgb(red = 0, green = 0, blue = 0, alpha = 0.1)
+)
+
+p_tagged_sub <- Plot(
+  Tagging[["StripedBass"]],
+  x = RelYear,
+  y = RelFL,
+  subset = RelYear > 2009 & CapMethod %in% 2 & !RelFLFlag &
+    # RelFL < 42 &
+    (is.na(TagAction) | TagAction %in% '1')
+)
+
+p_tagged_sub$grid(xRng = TRUE)
+Axis(p_tagged_sub, side = 2, labelAdj = 0.4)
+Axis(p_tagged_sub, side = 1, labelAdj = 0.3)
+
+# # points(p_tagged_sub)
+points(
+  x = jitter(p_tagged_sub$data()[["x"]]),
+  y = p_tagged_sub$data()[["y"]],
+  pch = 20,
+  cex = 0.75,
+  # col = rgb(red = 0, green = 0, blue = 0, alpha = 0.1)
+  col = lkp_col[as.character(p_tagged_sub$data()[["y"]] < 42)]
+)
+
+# sub() employeed to change alpha so point is visible
+legend(
+  x = p_tagged_sub[["xrng"]][[2]], 
+  y = p_tagged_sub[["yrng"]][[2]] * 1.11,
+  legend = c("sub-legal", "legal"),
+  col = sub(pattern = "1A$", replacement = "CC", x = lkp_col),
+  pt.cex = 2,
+  pch = 20,
+  border = NA,
+  bty = "n",
+  ncol = 2,
+  xpd = TRUE,
+  xjust = 0.75
+)
+
+mtext(text = "Year (fraction sub-legal)", side = 1, line = 2.2)
+mtext(text = "Fork length (cm)", side = 2, line = 2)
+
+# **********************************************************
+
+# to calculate fraction tagged of sub-legal sized fish
+frac <- aggregate(
+  formula = y ~ x,
+  data = p_tagged_sub$data(),
+  FUN = function(l) mean(l < 42)
+)
+
+# to display fraction (`frac`) below year xaxis tick labels
+text(
+  x = frac[["x"]],
+  # y = p_tagged_sub[["yrng"]][[2]] * 1.055,
+  y = p_tagged_sub[["yrng"]][[1]] * 0.58,
+  # labels = sprintf(fmt = "%.2f", frac[["y"]]),
+  labels = sprintf(fmt = "(%.2f)", frac[["y"]]),
+  cex = 0.75,
+  col = "grey50",
+  xpd = TRUE
+)
+
+# section clean up
+rm(lkp_col, frac)
+
+```
+
+```{r eval=FALSE}
+
+
+p_loc <- Plot(
+  x = range(catch[["RelYear"]]),
+  y = range(as.numeric(dimnames(catch[["DaysLoc"]])[[2]])),
+  adjUsr = 0.5
+)
+
+# p_loc$grid(yRng = F, ny = 1)
+
+Axis(p_loc, side = 1, labelAdj = 0.3)
+# Axis(p_loc, side = 2, labelAdj = 0.3)
+axis(side = 2, at = 1:16, labels = 1:16)
+
+#
+
+b <- catch[["CapMethod"]] %in% "GN"
+
+dn <- dimnames(catch[b, "DaysLoc"])
+
+# plot(c(1969, 2019), c(1, 16), type = "n")
+# rect(xleft = 1968.5, ybottom = 0.75, xright = 1969.5, ytop = 1.25, border = NA, col = rgb(red = 0, green = 0.35, blue = 0.65, alpha = 0.5))
+
+# # catch[[b, "DaysLoc"]]
+# # 
+# rect(
+#   xleft = catch[b, "RelYear"] - 0.5,
+#   ybottom = (1:16) - 0.25,
+#   xright = catch[b, "RelYear"] + 0.5,
+#   ytop = (1:16) + 0.25,
+#   border = NA,
+#   col = rgb(red = 0, green = 0.35, blue = 0.65, alpha = 0.5)
+# )
+
+# catch[b, "RelYear"] - 0.5
+# 
+# # 
+# 
+test <- lapply(dn[[1]], FUN = function(x, l) {
+
+  y <- gsub(pattern = "\\D", replacement = "", x = x)
+  y <- as.numeric(y)
+  
+  x1 <- y - 0.5
+  x2 <- y + 0.5
+  
+  lapply(l, FUN = function(ll) {
+    
+    yy <- as.numeric(ll)
+    
+    a <- catch[["DaysLoc"]][x, ll] / 52
+    
+    # col <- "grey85"
+    col <- "white"
+    
+    if (a > 0) 
+      col <- rgb(red = 0, green = 0.35, blue = 0.65, alpha = a)
+    
+    rect(
+      xleft = x1,
+      ybottom = yy - 0.5,
+      xright = x2,
+      ytop = yy + 0.5,
+      border = NA,
+      col = col
+    )
+    
+  })
+
+
+}, l = dn[[2]])
+p_loc$yticks()
+p_loc$ticks(side = 2)
+
+```
+
+```{r plot-days-loc, fig.asp=0.5, fig.width=8}
+
+# chunk creates 'heatmap' for days sampled by location per gear; creates layout
+# to make possible the display of a color bar for both gear types
+
+# note: alpha in `rgb()` uses sqrt(days / 100), this works because no value is >
+# 70 but it will fail say if days > 100
+
+# TODO: it is quite possible Map() & lapply() are not needed here, just
+# experiment with vectorization using rect() or segements() to plot
+# catch[["DaysLoc"]] matrix; will keep the way it is for now (21-Feb-2020) to
+# move on to other items in this review
+
+# create layout for main plot & color bar (another plot)
+lo <- layout(
+  mat = matrix(data = 1:2, ncol = 2, nrow = 1, byrow = TRUE),
+  widths = c(5.5, 0.25)
+)
+
+# layout.show(lo)
+
+# establish inner & outer margins for main plot
+par(mar = c(2, 2, 0.25, 2), oma = c(0.5, 0.5, 0.25, 1))
+
+# main plot based on release year range & numeric location range
+p_loc <- Plot(
+  x = range(catch[["RelYear"]]),
+  y = range(as.numeric(dimnames(catch[["DaysLoc"]])[[2]])),
+  adjUsr = 0.5
+)
+
+# for use in axis below
+locs <- seq_len(p_loc[["yrng"]][[2]])
+
+# establish grid, axes ticks, and axes labels ************************
+p_loc$grid(xRng = TRUE, yRng = TRUE)
+
+Axis(p_loc, side = 1, labelAdj = 0.3, interval = 5, offset = 1)
+
+axis(
+  side = 2,
+  at = locs,
+  labels = sub(pattern = " ", replacement = "0", x = format(locs)),
+  las = 1,
+  tcl = -0.2,
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50"
+)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Location code", side = 2, line = 1.3)
+
+# to plot value (i.e., days at location) as rectangle for heatmap appearance
+p_loc_heat <- Map(f = function(y, g) {
+  
+  # establish left & right sides of rectangle
+  x1 <- y - 0.5
+  x2 <- y + 0.5
+  
+  # for each location add a rectangle accordingly
+  lapply(locs, FUN = function(l) {
+    
+    # to get correct value from catch[["DaysLoc"]] matrix
+    x <- paste(y, g, sep = ".")
+    
+    # attemps to programatically generate value for alpha in rgb()
+    # a <- catch[["DaysLoc"]][x, as.character(l)] / 69
+    # a <- (log10(catch[["DaysLoc"]][x, as.character(l)] + 1)) %% 1
+    a <- sqrt(catch[["DaysLoc"]][x, as.character(l)] / 100)
+    
+    # default color 
+    col <- NA
+    
+    # color when greater than 0 & depending on gear type
+    if (a > 0)
+      if (g %in% "FT")
+        col <- rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = a)
+      if (g %in% "GN")
+        col <- rgb(red = 0.99, green = 0.54, blue = 0, alpha = a)
+    
+    # display the rectangle with appropriate color or no color (NA)
+    rect(
+      xleft = x1,
+      ybottom = l - 0.4,
+      xright = x2,
+      ytop = l + 0.4,
+      border = NA,
+      col = col
+    )
+    
+    # output color for use in color bar
+    col
+  })
+  # end inner lapply()
+
+}, y = catch[["RelYear"]], g = catch[["CapMethod"]])
+
+# establish second plot - which is the color bar
+par(mar = c(2.5, 0, 2.5, 0.1))
+
+# 1 & 2 for gear types, 70 used as max because max days at one loc = 69
+p_loc_color_bar <- Plot(x = c(1, 2), y = c(1, 70))
+
+Axis(p_loc_color_bar, side = 2, labelAdj = 0.3, cexAxis = 0.8)
+
+# for labeling color bar with gear type - easier this way than with axis()
+mtext(
+  text = c("FT", "GN"),
+  side = 3,
+  at = c(1.1, 1.9),
+  line = -0.5,
+  cex = 0.8,
+  col = "grey50"
+)
+
+# y-label for color bar
+mtext(text = "Days sampled", side = 2, line = 1.1, cex = 0.8)
+
+# for use in segments()
+y0 <- seq(from = 0, to = 60, by = 10)
+y1 <- seq(from = 10, to = 70, by = 10)
+a <- sqrt(y1 / 100)
+
+# y0 <- seq(from = 0, to = 69, by = 1)
+# y1 <- seq(from = 1, to = 70, by = 1)
+# a <- sqrt(y1 / 100)
+
+# add segements based on increasing color
+segments(
+  x0 = 1,
+  y0 = y0,
+  y1 = y1,
+  col = rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = a),
+  lwd = 25,
+  lend= 1
+)
+
+segments(
+  x0 = 2,
+  y0 = y0,
+  y1 = y1,
+  col = rgb(red = 0.99, green = 0.54, blue = 0, alpha = a),
+  lwd = 25,
+  lend= 1
+)
+
+# section clean up
+rm(lo, locs, p_loc_heat, p_loc_color_bar, y0, y1, a)
+
+```
+
+```{r eval=FALSE}
+
+# attempt at color bar for days-at-location plot above
+# Thu Feb 20 08:56:35 2020 ------------------------------
+
+plot(factor(c(1, 2)), c(1, 70), type = "n", lty = 0)
+
+
+
+
+Plot(x = c(1, 1), y = c(1, 70))$xticks()
+
+segments(x0 = 0.8, y0 = 0, y1 = 10, col = 1, lwd = 20, lend= 1)
+segments(x0 = 0.8, y0 = 10, y1 = 20, col = 2, lwd = 20, lend= 1)
+
+```
+

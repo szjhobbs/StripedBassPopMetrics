@@ -1,0 +1,499 @@
+---
+title: ""
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+```{r source}
+
+# libraries
+library(ggplot2)
+
+# source files
+source(file = "source/functions_life-table.R")
+
+```
+
+```{r load-data}
+
+StriperAll <- readRDS(file = "data/tagging/StriperAll.rds")
+
+# StriperAll$Method <- factor(StriperAll$Method, levels = c("FT", "GN"))
+
+```
+
+```{r functions}
+
+# chunk contains functions used solely with this .Rmd file - may change in
+# future but for now this will work
+
+FemaleFraction <- function(x) {
+  
+  if (length(x) == 0) return(NA)
+  
+  mean(x %in% "F")
+  
+}
+# end FemaleFraction
+
+```
+
+```{r variables}
+
+# chunk contains variables used throughout this file
+
+years <- 1969:2017
+# years <- setNames(years, nm = years)
+
+```
+
+##Introduction
+
+Purpose: to use life tables in hopes of describing or explaining the observed skew in striped bass sex ratio. Though with some variation, the fraction of females has diminished over time.
+
+##Data Overview
+
+Table below shows years in which we did not sample and in years of sampling, which gears we deployed (`FT` = fyke traps, `GN` = gill nets). Note: in 2011, gill nets were deployed one day (Apr-19), catching 17 striped bass (38-56 cm FL).
+
+NOTE: Fish caught after 2009 have not yet been aged.
+
+```{r years-method}
+
+# chunk displays table of years of tagging plus for which years of tagging which
+# gear was used (FT = fyke trap; GN = gill net)
+
+# note: gill net in 2011 for one day & only ~ 17 fish
+
+# TODO: display table in multi column not just Year, Method (too long)
+
+years_method <- vapply(years, FUN = function(y) {
+  
+  dat <- StriperAll[StriperAll$RelYear %in% y, ]
+  
+  res <- paste0(sort(unique(dat[["Method"]])), collapse = " & ")
+  
+  if (res == "") return("no tagging")
+  
+  res
+  
+}, FUN.VALUE = character(1L))
+
+# display as a table [cbind() could work but needs massaging for formatting]
+
+# construct dataframe for eventual output
+df_years_method <- data.frame(
+  Year = years,
+  Method = years_method,
+  stringsAsFactors = FALSE
+)
+
+# cbind for multicolumn in kable display
+disp <- cbind(
+  df_years_method[1:10,],
+  df_years_method[11:20,],
+  df_years_method[21:30,],
+  df_years_method[31:40,],
+  df_years_method[41:50,]
+)
+
+# only 49 years not even 50
+disp[is.na(disp)] <- ""
+
+# display table
+knitr::kable(disp, format = "pandoc")
+
+# chunk clean up
+rm(years_method, df_years_method, disp)
+
+```
+
+```{r sex-count, eval=FALSE}
+
+# chunk displays annually graphic of count of male & female (top panel) +
+# fraction of females; does this irrespective of gear type
+
+years_sex <- vapply(years, FUN = function(y) {
+  
+  dat <- StriperAll[StriperAll$RelYear %in% y, ]
+  
+  m <- sum(dat[["Sex"]] %in% 'M')
+  f <- sum(dat[["Sex"]] %in% 'F')
+  
+  if ((m + f) == 0) return(c(m = NA, f = NA))
+  
+  c(m = m, f = f)
+  
+}, FUN.VALUE = numeric(2L))
+
+dat_temp <- data.frame(years = years, t(years_sex))
+dat_temp$frac_f <- dat_temp$f / (dat_temp$m + dat_temp$f)
+
+dat_temp <- reshape2::melt(dat_temp, id.var = "years")
+dat_temp$group <- "group1"
+dat_temp$group[dat_temp$variable %in% "frac_f"] <- "group2"
+
+# does not help to re-order legend in plot
+# dat_temp$variable <- relevel(dat_temp$variable, ref = 'm')
+
+mp <- aes(x = years, y = value, colour = variable)
+dg1 <- dat_temp[dat_temp$group %in% "group1", ]
+dg2 <- dat_temp[dat_temp$group %in% "group2", ]
+
+# dg1$variable <- factor(dg1$variable, levels = c('m', 'f'))
+# dg2$variable <- factor(dg2$variable, levels = "frac_f")
+
+lblr <- labeller(group = c(group1 = "Count", group2 = "Fraction of females"))
+
+ggplot() +
+  geom_point(mapping = mp, data = dg1) +
+  geom_point(mapping = mp, data = dg2) +
+  geom_line(mapping = mp, data = dg1, linetype = 2, alpha = 1/2) +
+  geom_line(mapping = mp, data = dg2, linetype = 2, alpha = 1/2) +
+  facet_grid(
+    facets = group ~ .,
+    scales = "free_y",
+    labeller = lblr,
+    switch = "y"
+  ) +
+  scale_colour_manual(
+    "",
+    values = c(m = "steelblue", f = "darkorange2", frac_f = "grey30"),
+    labels = c(m = "M", f = "F"),
+    breaks = c('m', 'f', NULL)
+  ) +
+  ylab(NULL) +
+  theme(
+    strip.placement = "outside",
+    strip.background = element_rect(fill = "white"),
+    legend.position = "top"
+  )
+
+# chunk clean up
+rm(dat_temp, dg1, dg2, mp, years_sex)
+
+```
+
+```{r frac_gear, eval=FALSE}
+
+# chunk displays graphic of annual fraction of females by gear type
+
+# # FIO, uncomment as needed
+# with(data = StriperAll, expr = {
+#   table(RelYear, Sex, Method, useNA = "ifany")
+# })
+
+females_by_gear <- vapply(years, FUN = function(y) {
+  
+  dat <- subset(StriperAll, subset = RelYear %in% y)
+  
+  dat[["Method"]] <- factor(dat[["Method"]], levels = c("FT", "GN"))
+  
+  lst <- split(dat[["Sex"]], f = dat[["Method"]])
+  
+  res <- vapply(lst, FUN = FemaleFraction, FUN.VALUE = numeric(1L))
+
+  res
+  
+}, FUN.VALUE = numeric(2L))
+
+# dataframe & reshape for ease of plotting
+out <- data.frame(
+  years,
+  t(females_by_gear),
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+out <- reshape::melt(out, id.vars = "years")
+
+# plot of fraction of females by gear type
+ggplot(data = out, mapping = aes(x = years, y = value)) +
+  geom_line(mapping = aes(colour = variable), alpha = 1/2, linetype = 2) +
+  geom_point(mapping = aes(colour = variable), alpha = 1/2, size = 2) +
+  scale_colour_manual(
+    "",
+    values = c(FT = "steelblue", GN = "orange2"),
+    labels = c(FT = "Fyke", GN = "Net")
+  ) +
+  labs(x = "Year", y = "Fraction of females")
+
+# chunk clean up
+rm(out, females_by_gear)
+
+```
+
+Graphic below shows by fyke trap sampling locations annual fraction of females (as `females / (males + females)`). Table below defines numeric locations.
+
+Code | Location  
+-----|-----------------------------------------------  
+05   | Ida's Island (Sacramento River below Isleton)
+12   | Clarksburg
+13   | Fremont Weir
+14   | Colusa
+15   | Freeport
+16   | Knights Landing
+
+```{r frac_fyke, warning=FALSE}
+
+# chunk displays annual fraction of females by location for only fyke traps
+
+females_by_fkye <- vapply(years, FUN = function(y) {
+  
+  dat <- subset(StriperAll, subset = RelYear %in% y & Method %in% "FT")
+  
+  dat[["Location"]] <- factor(dat[["Location"]], levels = c(5, 12:16))
+  
+  lst <- split(dat[["Sex"]], f = dat[["Location"]])
+
+  res <- vapply(lst, FUN = FemaleFraction, FUN.VALUE = numeric(1L))
+
+  res
+  
+}, FUN.VALUE = numeric(6L))
+
+# dataframe & reshape for ease of plotting
+out <- data.frame(
+  years,
+  t(females_by_fkye),
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+out <- reshape::melt(out, id.vars = "years")
+
+# removes X caused by numerics into column names
+out[["variable"]] <- factor(
+  out[["variable"]],
+  labels = c(
+    X5 = "05", X12 = "12", X13 = "13",
+    X14 = "14", X15 = "15", X16 ="16"
+  )
+)
+
+ggplot(data = out, mapping = aes(x = years, y = value)) +
+  geom_line(mapping = aes(colour = variable), alpha = 1/1, linetype = 2) +
+  geom_point(mapping = aes(colour = variable), alpha = 1/1, size = 3) +
+  labs(x = "Year", y = "Fraction of females", colour = "Location: ") +
+  theme(legend.position = "top") +
+  guides(colour = guide_legend(nrow = 1))
+
+# chunk clean up
+rm(out, females_by_fkye)
+
+```
+
+```{r mean_len_age, eval=FALSE}
+
+# chunk displays annual mean length at age for males & females
+
+# TODO: clean up plot & implement (perhaps) application of VB growth model
+
+dat_age <- subset(StriperAll, subset = Age > 2 & FL > 25 & !(Sex %in% 'U'))
+
+# ggplot(data = dat_age, mapping = aes(x = factor(Age), y = FL)) +
+#   geom_boxplot(mapping = aes(colour = Sex), position = "dodge", outlier.size = 0.5) +
+#   facet_wrap(facets = ~RelYear, ncol = 6)
+
+ggplot(data = dat_age, mapping = aes(x = Age, y = FL)) +
+  # geom_point(mapping = aes(colour = Sex), alpha = 1/20) +
+  stat_summary(
+    mapping = aes(colour = Sex),
+    fun.y = mean,
+    geom = "point",
+    size = 2,
+    alpha = 1/2
+  ) +
+  facet_wrap(facets = ~RelYear, ncol = 6)
+
+# chunk clean up
+rm(dat_age)
+
+```
+
+```{r not-aged, eval=FALSE}
+
+# for now chunk simply displays table of fish not aged or NA by year
+
+# TODO: decide best way to present this data & provide metadata
+#       (e.g., 0 = ?, 1 = ?)
+
+dat_age <- subset(StriperAll, subset = Age < 2 | is.na(Age))
+
+with(data = dat_age, expr = {
+  table(RelYear, Age, useNA = "ifany")
+})
+
+```
+
+##Metadata
+
+Column headings of life tables (see below) defined as follows.
+
+`x`  = age (from scale samples)  
+`nx` = frequency (count) at each age  
+`lx` = proportion of fish surviving to next stage (as `nx[age] / nx[first age]`)  
+`dx` = proportion of fish dying during each stage (as `lx[age] / lx[age + 1]`)  
+`qx` = mortality rate for each stage (as `dx / lx`)
+`Lx` = average proportion alive at each stage  
+`Tx` = total number of living fish (cumulative sum of `Lx` from bottom up)
+`ex` = average life expectancy (?) for each stage (as `Tx / x`)
+
+##Life Tables
+
+We begin life tables by looking at the annual frequency (catch) of each age. For ease of display, we show the first 10 years along with ages 3-12.
+
+```{r yr_age}
+
+tbl_year_age <- with(data = subset(StriperAll, subset = Age > 2), expr = {
+  table(RelYear, Age)
+})
+
+tbl_year_age[1:10, 1:10]
+
+```
+
+A static life table uses frequency (catch) within a single year (e.g., see 1969 below).
+
+```{r demo-static}
+
+tbl_year_age[1, 1:10, drop = FALSE]
+
+```
+
+A cohort life table tracks a cohort through time. Below we start with age-3 fish in 1969, followed (9 years forward) to age-12. We use this "diagonal" frequency (catch) for cohort life tables.
+
+```{r demo-cohort}
+
+bool_up <- upper.tri(tbl_year_age[1:10, 1:10])
+bool_lw <- lower.tri(tbl_year_age[1:10, 1:10])
+
+tbl_year_age[1:10, 1:10][bool_up] <- ""
+tbl_year_age[1:10, 1:10][bool_lw] <- ""
+
+tbl_year_age[1:10, 1:10]
+
+```
+
+```{r plot-age3_4, eval=FALSE}
+
+# chunk displays plot demonstrating the difference in catch between ages 3 & 4; 
+# typically we catch more 4 yo than 3 yo but we see some annual variable between
+# gear types, except for 1 year (1981) gill nets catch more 4 yo than 3
+
+# idea behind plot is to demonstrate age4 is the appropriate age to be the
+# starting age for constructing life tables
+
+# TODO: clean up plot
+
+age3_4 <- lapply(c(FT = "FT", GN = "GN"), FUN = function(gt) {
+  
+  # creates table with missing (no tagging) years as NA
+  tbl <- CreateTable(
+    subset(
+      StriperAll,
+      subset = Age %in% 3:4 & Method %in% gt,
+      select = c(RelYear, Age)
+    )
+  )
+  
+  # of frequency of 3+4 yo, get fraction of 4 yo
+  frac_4 <- tbl[, "4"] / rowSums(tbl)
+  
+  # combine output in dataframe for ease of rbind()ing & plotting
+  data.frame(
+    Year = as.numeric(dimnames(tbl)[[1]]),
+    Gear = gt,
+    Frac4 = frac_4,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  
+})
+
+# combine list of geartypes
+age3_4 <- do.call(rbind, age3_4)
+rownames(age3_4) <- 1:nrow(age3_4)
+
+# plot time series of frac of 4 yo by gear type - above 0.5 indicates more 4 yo
+# than 3 yo
+ggplot(data = age3_4, mapping = aes(x = Year, y = Frac4)) +
+  geom_hline(yintercept = 0.5, colour = "red", alpha = 1/1, linetype = 3) +
+  geom_point(size = 3) +
+  geom_line(linetype = 2, size = 0.75) + 
+  facet_grid(facets = Gear ~ .)
+  # scale_x_continuous(expand = c(0.03, 0)) #+
+  # scale_colour_manual("Age", values = c('3' = "skyblue", '4' = "brown3"))
+
+```
+
+###Static Life Table
+
+Here we show (as an example) a static life table for 1969 fyke trap sampling. Top table is for males, bottom for females.
+
+```{r lt-static, comment=""}
+
+# chunk demos static life table using (for now) 1969 fyke data; separate tables
+# for males & females
+
+bool_male_female <- StriperAll$Sex %in% c('F', 'M')
+
+lst_striper_all <- split(
+  StriperAll[bool_male_female, ],
+  f = StriperAll[bool_male_female, c("RelYear", "Method", "Sex")]
+)
+
+# testing LifeTable() on all striper data
+nx <- lapply(lst_striper_all[c("1969.FT.M", "1969.FT.F")], FUN = function(d) {
+  StaticFrequency(d, x = Age, Age > 3)
+})
+
+Map(LifeTable, nx)
+
+```
+
+###Cohort Life Table
+
+Here we show (as an example) a cohort life table for 1969 fyke trap sampling. Top table is for males, bottom for females. As we did not deploy fyke traps in 1977 & 1978, no data are available for ages 12 & 13.
+
+```{r lt-cohort, comment=""}
+
+cf_males <- CohortFrequency(
+  Method %in% "FT" & Sex %in% "M",
+  ageBegin = 4,
+  ageEnd = 20,
+  year = 1969
+)
+
+cf_females <- CohortFrequency(
+  Method %in% "FT" & Sex %in% "F",
+  ageBegin = 4,
+  ageEnd = 20,
+  year = 1969
+)
+
+LifeTable(cf_males[["Freq"]])
+LifeTable(cf_females[["Freq"]])
+
+```
+
+```{r ref, eval=FALSE}
+
+# for reference
+# https://www.r-bloggers.com/useful-tricks-when-including-images-in-rmarkdown-documents/
+
+```
+
+---
+
+end of report  
+ran: `r Sys.time()`  
+CDFW (2017)  

@@ -1,0 +1,969 @@
+---
+
+---
+
+<!--
+
+for right now (13-May-2020) this file (_2age_com.Rmd) will contain creel census age-com, but may need to separate by creel type if file gets too big
+
+-->
+
+### Creel Census
+
+The creel census began commensurate with catch, tag, and then release CDFW field operations. Up until 2009 when the program was terminated, CDFW staff queried anglers about their catch. Data collected provided (1) additional catch and recaptures (the 'C' and 'R' in the Petersen algorithm), (2) another gear type (hook-n-line) to mitigate for gill net or fyke trap biases, and (3) a wider spatial coverage of the San Francisco Estuary and Delta.
+
+From 1969 through 1987, the Creel Census sampled <XXXXX>, thus called Bay Creel. In 1988, River Creel was added providing coverage <XXXXXX>. Bay Creel sampled 16-Jun through 15-Dec, and River Creel sampled 16-Dec through 15-Jun.
+
+#### Data
+
+Creel census data are housed in the `data/tagging` directory in three `.rds` files. These files are extracts from SQL Server database `BDASB` and are explained below. Information from all three are used to estimate abundance.
+
+- *CreelCensus*: trip information (i.e., date, hours fished; anglers; species; catch)
+- *CCAge*: fish specific length, sex, age, and tag number (if any or all available)
+- *CCLenSex*: fish specific length & sex; tag number if available
+
+### Data Preparation
+
+We need to distinguish the dataset as either 'bay' or 'river' (abbreviated 'rvr' for convenience). Further, we need to distinguish creel year from sampling year, as river creel samples over the calendar year. December river creel sampling is grouped into the next calendar year (e.g., 1987 sampling is creel year 1988).
+
+We use `sportfish::CreelType()` to add three new fields to `CreelCensus` and `CCAge`: 'CYear' (or creel year), Month (month in which creel occurred), & Type (either 'bay' or 'rvr').
+
+```{r creel-type}
+
+# chunk assigns either "bay" or "rvr" to creel type for subsetting & analytics;
+# may want to move this to data import at some point so this field is always
+# available in the .rds file (13-May-2020)
+
+# river creel ("rvr"): Dec 16 --> Jun 15
+# bay creel ("bay"):   Jun 16 --> Dec 15
+
+# CreelType() adds fields CYear, Month, & Type where CYear is creel year
+
+# add columns to CCAge for analytics
+n_cols <- ncol(Tagging[["CCAge"]]) + 1:3
+Tagging$CCAge[n_cols] <- CreelType(Tagging[["CCAge"]][["Date"]])
+
+# add columns to CreelCensus dataframe
+n_cols <- ncol(Tagging[["CreelCensus"]]) + 1:3
+Tagging$CreelCensus[n_cols] <- CreelType(Tagging[["CreelCensus"]][["Date"]])
+
+# section clean up
+rm(n_cols)
+
+```
+
+The protocol requires a count of Striped Bass count measured and (or) sexed. For convenience, we add this count as field `LenSexCount` to the `CreelCensus` dataset. We obtain count by getting the frequency of field `DetailID` in dataset `CCLenSex`. The relation is one-->many (`CreelCensus` to `CCLenSex`) on `DetailID`. So, tabulation of each `DetailID` in `CCLenSex` will give total measured for each record in `CreelCensus`.
+
+```{r len-sex-count}
+
+# chunk gets number of fish measured and (or) sexed from dataframe `CCLenSex`, &
+# then adds field to `CreelCensus` with relevant data; data used to eventually
+# get accurate count of total catch per MainID
+
+# should be zero
+# sum(is.na(Tagging[["CCLenSex"]][["DetailID"]]))
+
+det_id_count <- table(Tagging[["CCLenSex"]][["DetailID"]])
+
+i <- match(
+  Tagging[["CreelCensus"]][["DetailID"]],
+  table = as.integer(names(det_id_count))
+)
+
+# both should be TRUE
+# length(i) == nrow(Tagging[["CreelCensus"]])
+# sum(!is.na(i)) == length(det_id_count)
+
+Tagging$CreelCensus$LenSexCount <- det_id_count[i]
+
+# section clean up
+rm(det_id_count, i)
+
+```
+
+Because of the way creel data was uploaded from flat-files to MS Access (~2011), there exist some duplicate records (less fields `DetailID` & # `LenSexCount`) in `CreelCensus`. Including these duplicate records will inflate catch when summing the `Catch` field. We identify such duplicate records in `CreelCensus` for later filtering.
+
+```{r duplicates}
+
+# because of the way creel data was uploaded to the new (circa 2011) Access
+# database, there exist some duplicate records (less fields DetailID &
+# LenSexCount) in `CreelCensus`; including these duplicate records will
+# over-inflate catch when summing `Catch` field
+
+# chunk identifies these duplicate records for later removal as needed
+
+cols <- c("DetailID", "LenSexCount")
+# cols <- c("DetailID")
+
+id <- which(colnames(Tagging[["CreelCensus"]]) %in% cols)
+Tagging$CreelCensus$Dup <- duplicated(Tagging[["CreelCensus"]][-id])
+
+# section clean up
+rm(id, cols)
+
+```
+
+To facilitate record filtering (i.e., duplicate removal), using `sportfish::Split()` we separate `CreelCensus` by creel year, month, type, main ID, and catch. We store results in variable `cc_split`. Older creel flat-files stored up to ~12 lengths in one row before continuing on the next line (row). In a somewhat convoluted method, we identify these records and filter them from the process. See `base::vapply()` loop to generate `cc_split$CatchSum` in file `_2age_com.Rmd`.
+
+```{r ccensus-split}
+
+# chunk splits census data based on creel year, month, type, main-id, & catch to
+# make easier the task of including or not including dup records (not all dup
+# records should be removed)
+
+# subset to include only striped bass (species 1)
+cc_split <- Split(
+  data = Tagging[["CreelCensus"]],
+  subset = Species %in% 1,
+  vars = c(Date, Anglers, Catch, LenSexCount, Dup),
+  # splitVars = c(CYear, Month, Type),
+  splitVars = c(CYear, Month, Type, MainID, Catch),
+  drop = TRUE
+)
+
+cols_num <- c("CYear", "Month", "MainID", "Catch")
+
+# for convenience of desired data type
+cc_split[cols_num] <- lapply(cc_split[cols_num], FUN = as.numeric)
+
+# add record count for information & to assist with troubleshooting as needed
+cc_split$Rec <- vapply(
+  cc_split[["Data"]],
+  FUN = nrow,
+  FUN.VALUE = numeric(1L)
+)
+
+# convoluted but basically sums catch if no dups detected OR if catch is < 12
+# (as best I could tell 11 or 12 is the magic cutoff for when --- in the old
+# system --- len & sex data would continue on the next line (thus the
+# duplication in catch (or rows with catch)); could be a better way to do this
+# but I've already spent a decent amount of time trying to reconcile numbers &
+# must move on - this I believe gets close to previously crunched numbers. The
+# final step --- if catch >= 12 and dups exist is to sum all catch & number
+# measured and (or) sexed, get the difference, sum catch for duplicate records,
+# then subtract difference from the sum adding number measured and (or) sexed -
+# convoluted, yes, but seems to work
+cc_split$CatchSum <- vapply(cc_split[["Data"]], FUN = function(d) {
+  
+  if (all(!d[["Dup"]]) || all(d[["Catch"]] < 12))
+    return(sum(d[["Catch"]]))
+  
+  # to variable b for convenience
+  b <- d[["Dup"]]
+  
+  x <-  sum(d[["Catch"]], na.rm = TRUE)
+  y <-  sum(d[["LenSexCount"]], na.rm = TRUE)
+  
+  r <- x - y
+  
+  # sum of catch for duplicated records
+  p <- sum(d[b, "Catch"], na.rm = TRUE)
+  
+  # final output
+  (r - p) + y
+  
+}, FUN.VALUE = numeric(1L))
+
+# clean up
+rm(cols_num)
+
+# ******************************************************************************
+# for testing: uncomment as needed to look at catch by MainID (the identifier
+# for date, port, timestart, timeend)
+
+# cc_split <- Split(
+#   data = Tagging[["CreelCensus"]],
+#   subset = Species %in% 1,
+#   splitVars = c(MainID, Catch),
+#   drop = TRUE
+# )
+# 
+# cc_split$Check <- vapply(cc_split[["Data"]], FUN = function(d) {
+#   any(d[["Dup"]]) & !any(d[["LenSexCount"]] %in% 11)
+# }, FUN.VALUE = logical(1L))
+# 
+# cc_split$Check2 <- vapply(cc_split[["Data"]], FUN = function(d) {
+#   any(d[["Catch"]] >= 12)
+# }, FUN.VALUE = logical(1L))
+# ******************************************************************************
+
+```
+
+We sum `CatchSum` by creel year, month, and type for the final catch tally. Variable `census_count` holds the results of `stats::aggregate()` performing such process.
+
+```{r census-count}
+
+# just to check - uncomment as needed
+# with(data = Tagging[["CreelCensus"]], expr = {
+#   table(Year, Year.1, useNA = "ifany")
+# })
+
+census_count <- aggregate(
+  formula = CatchSum ~ CYear + Month + Type,
+  data = cc_split,
+  FUN = sum
+)
+
+```
+
+### Fields & Factoring
+
+To facilitate analytics, we added fields or converted to factor (`base::factor()`) some existing fields in data set `CCAge`. Conversion to factor ensure all levels of some variable 'x' appear, for example when calling `base::table()`.
+
+For data cleaning, we set to `NA` non-ages (0 & 1) and non-lengths (0). We set `Sex` field to factor using levels 'm' (male), 'f' (female), and 'u' (unknown).
+
+```{r data-clean}
+
+# chunk cleans data for analytics; may want to move this to data import at some
+# point so some of this is always available in the .rds file (13-May-2020)
+
+# some data clean up for analytics
+# (1) need to set to NA ages 0 & 1
+# (2) need to set to NA length 0
+# (3) need to set Sex as factor 1 = 'm', 2 = 'f', NA = 'u'
+
+Tagging$CCAge$Age[Tagging[["CCAge"]][["Age"]] %in% 0:1] <- NA
+Tagging$CCAge$ForkLen[Tagging[["CCAge"]][["ForkLen"]] %in% 0] <- NA
+
+Tagging$CCAge$Sex <- factor(
+  Tagging[["CCAge"]][["Sex"]],
+  levels = c(1, 2, NA),
+  labels = c('m', 'f', 'u'),
+  exclude = NULL
+)
+
+# for checking uncomment as needed
+# with(data = Tagging[["CCAge"]], expr = {
+# 
+#   # table(Age, Sex, useNA = "ifany")
+#   # table(ForkLen, Age, useNA = "ifany")
+#   # tail(table(ForkLen, Age, useNA = "ifany"))
+# 
+#   # range(ForkLen, na.rm = TRUE)
+#   # table(Port, Method, useNA = "ifany")
+#   # table(RecapLoc, useNA = "ifany")
+#   print(table(Year, Month, Type, useNA = "ifany"))
+#   # table(Year, b, useNA = "ifany")
+# 
+# })
+
+# clean up
+# rm()
+
+```
+
+We add fields `Year` (calendar year) and `LenCat` (length category) to further facilitate analytics. We add length category using `sportfish::LengthGroup()`.
+
+```{r length-cat-creel}
+
+Tagging$CCAge$Year <- as.numeric(
+  format(Tagging[["CCAge"]][["Date"]], format = "%Y")
+)
+
+# to categorize each length as sub-legal, legal, or unk
+Tagging$CCAge$LenCat <- LengthGroup(
+  data = Tagging[["CCAge"]],
+  year = Year,
+  fl = ForkLen,
+  regTable = "sb"
+)
+
+```
+
+### Data Partitioning: *CCAge* dataset
+
+We split `CCAge` by creel year to facilitate getting catch by age annually (and by creel type). We use `sportfish::Split()`, assigning results to variable `creel`.
+
+```{r creel}
+
+creel <- Split(data = Tagging[["CCAge"]], splitVars = CYear)
+
+# desired data type
+creel$CYear <- as.numeric(creel[["CYear"]])
+
+```
+
+We stratify abundance estimates by age and by sex. To include the maximum number of fish in such estimates, we apportion sex to fish without such a field-assigned label using the known sex ratio. `sportfish::ApportionSex()` calls `base::sample()`, setting parameter `prob` to the proportion of males and females. This process assigns either 'm' or 'f' to each fish without such a distinction and yields only whole counts (i.e., no fractions of fish). Because `base::sample()` results are random, it is necessary to call `base::set.seed()` (or similar) for reproducibility.
+
+`sportfish::ApportionSex()` returns the entire dataframe with the 'Sex' field adjusted accordingly. We use `creel[["Data"]]` and re-assign the results back to said field.
+
+```{r apportion-sex-ccage}
+
+set.seed(456)
+creel$Data <- lapply(creel[["Data"]], FUN = ApportionSex, sex = Sex)
+
+```
+
+We divide `creel[["Data"]]` by sex (using field `Sex`), assigning the results to `catch$BySex`. `BySex` is a list within a list (Data --> Sex --> Creel Year; working inward to outward).
+
+```{r split-creel-sex}
+
+creel$BySex <- lapply(creel[["Data"]], FUN = function(d) {
+  Split(data = d, splitVars = Sex, drop = FALSE)
+})
+
+```
+
+```{r creel-record-count}
+
+# counts number of records by creel type
+creel$RecCountType <- t(vapply(creel[["Data"]], FUN = function(d) {
+  type <- factor(d[["Type"]], levels = c("bay", "rvr"))
+  table(type)
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+### Growth Rate: Bay Creel
+
+Each Bay Creel season began shortly after tagging had ended. Previous biologists developed a method to weed from creel data fish that were not legal sized during tagging. This method created a crude age-3 growth rate using available mean monthly fork length data July-November. The growth rate was cumulatively added to minimum legal size (e.g., 42 cm fork length) to yield a monthly cutoff length. Any fish less than such length would not be included in analytics. June and December were not included as these were "half" months.
+
+Here, we developed a daily growth rate using similar methodology. We used all available bay creel data (June through December) obtaining the slope (growth rate) from least squares regression (`stats::lm()`) on fork length as a function of date.
+
+```{r daily-growth}
+
+# chunk gets daily growth rate by obtaining slope from least square regression;
+# a slight variation on the original taking mean monthly fork length (Jul-Nov)
+# and dividing by 4; this approach uses all data (including truncated months of
+# Jun & Dec for bay creel)
+
+creel$DailyGrowth <- t(vapply(creel[["Data"]], FUN = function(d) {
+
+  # for daily growth rate (as slope)
+  m <- lm(
+    formula = ForkLen ~ as.Date(Date),
+    data = d,
+    subset = Age %in% 3 & Type %in% "bay"
+  )
+
+  # slope (coef #2 is daily growth rate)
+  c(
+    Rate = m[["coefficients"]][[2]],
+    NumRecs = dim(m[["model"]])[[1]]
+  )
+
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+```{r eval=FALSE}
+
+# possible plot
+
+plot(
+  creel$CYear,
+  creel$DailyGrowth[, "Rate"]
+)
+
+abline(h = 0, col = 2)
+
+```
+
+We developed the monthly cutoff using daily growth rate and the number of days in each month, where June and December each had 15 days to mark the start and end of the Bay Creel season. Where the daily growth rate was &le; 0, we used the overall median growth rate.
+
+<!-- discuss growth rate not always linear and not always positive due to lack(?) of data -->
+
+```{r monthly-cutoff}
+
+daily_growth_rate <- DescStat(creel[["DailyGrowth"]][, "Rate"])
+
+# days per month (Jun, Jul, Aug, Sep, Oct, Nov, Dec)
+days <- c(15, 31, 31, 30, 31, 30, 15)
+names(days) <- month.abb[6:12]
+
+creel$MonthlyCutoff <- Map(f = function(x, y) {
+  l <- 42
+  if (x <= 0) x <- daily_growth_rate[["Med"]]
+  if (y < 1982) l <- 38
+  (cumsum(days) * x) + l
+}, creel[["DailyGrowth"]][, "Rate"], creel[["CYear"]])
+
+# clean up
+rm(days, daily_growth_rate)
+
+```
+
+### Assign Age: Creel Data
+
+The process we developed to assign an age to each non-aged fish is admittedly involved. We use 'Data' in `creel[["BySex"]]`. Doing so requires a nested `base::lapply()` and does not consider creel type.
+
+(1) call `sportfish::AgeEach()`, supplying sequence min length to max length (by 1) to`lenBreaks`
+(2) check for any ages NA
+(3) if any NA, call `sportish::AgeAssign()`
+    (a) requires call to `base::mapply()`, where `list(alk = qalk, setSeed = <some numeric>)` is supplied to `MoreArgs`
+    (b) note setting seed as `sportish::AgeAssign()` calls `base::sample()`
+    (c) note the use of `qalk`
+(4) using results from #3, assign age to any fish NA from step #2
+(5) check again for any ages NA
+(6) any remain non-aged fish are assigned an age based on proportion of aged fish
+(7) create field `Aged` in dataframe and return the entire dataframe; output is 'Data' in `creel[["BySex"]]` with all fish aged (a message will display number NA, if any)
+
+We assign results of steps above back to `creel$BySex`, a nested list.
+
+```{r creel-by-sex-all-aged}
+
+# chunk assigns ages to non-aged fish using available age-length data
+
+creel$BySex <- lapply(creel[["BySex"]], FUN = function(d) {
+  
+  d$Data <- lapply(d[["Data"]], FUN = function(dd) {
+
+    r <- range(dd[["ForkLen"]], na.rm = TRUE)
+    lb <- seq(from = r[[1]], to = r[[2]] + 1, by = 1)
+
+    # assign ages to each fish - need to employee `set.seed` but how
+    # set.seed(seed = 456)
+    a <- AgeEach(data = dd, len = ForkLen, age = Age, lenBreaks = lb)
+
+    # check for which ages are still NA post call to AgeEach()
+    b_age_na <- is.na(a[["Ages"]])
+    
+    # now check if any ages are still NA, if yes then employ AgeAssign
+    if (any(b_age_na)) {
+      
+      # create len-frequency where ages are missing (NA)
+      lf <- table(dd[b_age_na, "ForkLen"], useNA = "ifany")
+      
+      # if there is len-freq, then attempt to assign ages
+      if (dim(lf) != 0) {
+        
+        # used to keep order in tact with `o`
+        ord <- lapply(names(lf), FUN = function(x) {
+          which(dd[b_age_na, "ForkLen"] %in% as.numeric(x))
+        })
+        
+        # does not work properly without call to `order()`
+        ord <- order(unlist(ord, use.names = FALSE))
+    
+        age_assign <- mapply(
+          FUN = AgeAssign,
+          len = names(lf),
+          size = lf,
+          MoreArgs = list(alk = qalk, setSeed = 123),
+          SIMPLIFY = FALSE
+        )
+        
+        # unlist to get vector of ages
+        age_assign <- unlist(age_assign, use.names = FALSE)[ord]
+        
+        # re-assign to original age vector
+        a[["Ages"]][b_age_na] <- age_assign
+      }
+      # end dim check
+      
+    }
+    # end any NA check
+    
+    # now recheck with ages are still NA
+    b_age_na <- is.na(a[["Ages"]])
+    
+    # use proportion of remaining ages to assign any un-aged
+    if (any(b_age_na)) {
+      
+      pt <- prop.table(table(a[["Ages"]]))
+      
+      sampled_ages <- sample(
+        as.numeric(names(pt)),
+        size = sum(b_age_na),
+        replace = TRUE,
+        prob = pt
+      )
+      
+      a[["Ages"]][b_age_na] <- sampled_ages
+    }
+    
+    # assign ages back to dataframe
+    dd$Ages <- a[["Ages"]]
+    dd
+  })
+  # end inner lapply
+  d
+})
+# end outer lapply
+
+```
+
+### Relative Age Composition: Creel
+
+Per protocol, we developed a relative age composition (RAC) by creel type (bay & river). Here we filtered (removed) any fish categorized as sub-legal (`sub`). For Bay Creel data, we further filtered data on the monthly length cutoff calculated in previous sections. Output for both creel types is age frequency by month and number measured by month. Bay Creel output includes frequency measured meeting cutoff requirement.
+
+*Note*: per protocol, River Creel ages from Dec-Mar are increased by 1. Tagging does not begin until April, so it is assumed (likely <VERIFY>) fish collected Dec-Mar are from previous year.
+
+```{r creel-rac}
+
+# need to subset on no sub-legal sized fish & for bay creel - monthly cutoff
+# lengths found in creel$MonthlyCutoff
+
+creel$RAC <- Map(f = function(s, mc) {
+  
+  lapply(s[["Data"]], FUN = function(d) {
+    
+    # to process by creel type for getting summary by month
+    tt <- Split(
+      data = d,
+      subset = !LenCat %in% "sub",
+      vars = c(Month, ForkLen, Ages),
+      splitVars = Type
+    )
+    
+    Map(f = function(dd, type) {
+      
+      # check for bay creel
+      if (type %in% "bay") {
+        use <- rep(TRUE, times = nrow(dd))
+        m <- month.abb[dd[["Month"]]]
+        i <- match(m, table = names(mc))
+        b <- dd[["ForkLen"]] >= mc[i]
+        use[!b] <- FALSE
+        
+        # for ordering, although numerically this should order as desired
+        dd$Month <- factor(dd[["Month"]], levels = 6:12)
+        
+        out <- list(
+          AgeMonth = table(dd[use, "Ages"], dd[use, "Month"]),
+          MeasCutoff = table(dd[use, "Month"]),
+          Measured = table(dd[["Month"]])
+        )
+        return(out)
+      }
+      
+      # what's left is river creel
+      
+      # because protocol states ages from Dec-Mar are increased by 1 (year)
+      b <- dd[["Month"]] %in% c(12, 1:3)
+      dd[b, "Ages"] <- dd[b, "Ages"] + 1
+      
+      # for desired ordering as Dec (12) is from previous year
+      dd$Month <- factor(dd[["Month"]], levels = c(12, 1:6))
+      
+      # output for river creel
+      list(
+        AgeMonth = table(dd[["Ages"]], dd[["Month"]]),
+        Measured = table(dd[["Month"]])
+      )
+      
+    }, tt[["Data"]], tt[["Type"]])
+    
+  })
+  # end lapply
+  
+}, creel[["BySex"]], creel[["MonthlyCutoff"]])
+
+```
+
+To apportion total catch by sex, we needed the monthly sex ratio for bay creel and river creel. For this, we used data in `creel[["RAC"]]`. For bay creel, we used the monthly count of fish at or above the cutoff. For river creel, we used all measured fish. Examples of each are shown below.
+
+```{r creel-bay-prop-by-sex}
+
+creel$BayPropBySex <- lapply(creel[["RAC"]], FUN = function(r) {
+  
+  bay <- vapply(r, FUN = function(x) {
+     x[["bay"]][["MeasCutoff"]]
+  }, FUN.VALUE = numeric(7L))
+  
+  prop.table(bay, margin = 1)
+
+})
+# end outer lapply
+
+```
+
+```{r creel-rvr-prop-by-sex}
+
+creel$RiverPropBySex <- lapply(creel[["RAC"]], FUN = function(r) {
+  
+  # for ease of getting only river creel data
+  rvr <- vapply(r, FUN = function(x) {
+    if (is.null(x[["rvr"]])) return(rep(NA, times = 7))
+     x[["rvr"]][["Measured"]]
+  }, FUN.VALUE = numeric(7L))
+  
+  # desired proportion by sex
+  rvr <- prop.table(rvr, margin = 1)
+  
+  # to clean up output as all we need here is river creel data
+  if (all(is.na(rvr))) return(NULL)
+  rvr
+})
+# end outer lapply
+
+```
+
+```{r propbysex-example}
+
+cat("Bay Creel - 2002\n")
+creel[["BayPropBySex"]][["2002"]]
+
+cat("\nRiver Creel - 2002\n")
+creel[["RiverPropBySex"]][["2002"]]
+
+```
+
+For Bay Creel, to apportion total catch we also need the monthly ratio of measured (cutoff) to measured (all). Per protocol, this ratio was calculated irrespective of sex. So, we employed `base::Reduce()` and `+` to "collapse" the list of males and females. From outward inward, nested lists proceed as follows: measured --> creel type --> sex --> creel year --> `creel[["RAC"]]`.
+
+```{r creel-bay-prop-meas-leg}
+
+creel$BayPropMeasLegal <- lapply(creel[["RAC"]], FUN = function(r) {
+  
+  ms <- Reduce(f = `+`, lapply(r, FUN = function(x) x[["bay"]][["Measured"]]))
+  mc <- Reduce(f = `+`, lapply(r, FUN = function(x) x[["bay"]][["MeasCutoff"]]))
+  
+  mc / ms
+})
+# end outer lapply
+
+```
+
+Next, we needed monthly age frequency (proportion) by creel type. Simply, we called `base::prop.table(x, margin = 2)`, where `x` = table age x month. *Note*: `prop.table()` column sums should all equal 1.
+
+```{r prop-age-month}
+
+creel$BayPropAgeMonth <- lapply(creel[["RAC"]], FUN = function(r) {
+  
+  lapply(r, FUN = function(x) {
+    prop.table(x[["bay"]][["AgeMonth"]], margin = 2)
+  })
+
+})
+# end outer lapply
+
+creel$RvrPropAgeMonth <- lapply(creel[["RAC"]], FUN = function(r) {
+  
+  lapply(r, FUN = function(x) {
+    if (is.null(x[["rvr"]])) return(NULL)
+    prop.table(x[["rvr"]][["AgeMonth"]], margin = 2)
+  })
+
+})
+# end outer lapply
+
+```
+
+### Census Catch Apportioned
+
+Here, we apportioned census catch (found in variable `census_count`) by sex, separately by creel type. This is the final step prior to getting age compostion.
+
+#### River Creel
+
+To avoid fractions, the process (here, not protocol) assigns the "left over" 1 to male if the proportion of males is greater, otherwise female. The output is a frequency table month x sex (m, f).
+
+```{r river-catch-apportioned}
+
+# to apportion creel census catch by sex
+creel$RvrCatchApportioned <- Map(f = function(y, r, cc = census_count) {
+  
+  # nothing to do
+  if (length(r) == 0) return(NULL)
+  
+  # for subsetting inputs
+  b <- cc[["CYear"]] %in% y  & cc[["Type"]] %in% "rvr"
+  
+  # for matching with census_count (i.e., total catch)
+  dnms <- dimnames(r)
+  i <- match(as.numeric(dnms[[1]]), table = cc[b, "Month"])
+  
+  # to apportion catch given proportion of males & females
+  o <- cc[b, "CatchSum"][i] * r
+  
+  # to deal with left over to avoid fractions of fish; if leftover for male is
+  # greater, then 1 goes to male, otherwise female; leftover should sum to
+  # either NA, 0, or 1
+  lo <- t(apply(o %% 1, MARGIN = 1, FUN = function(x) {
+    if (all(is.na(x))) return(c(NA, NA))
+    # sum(x) should now either be 1 or 0
+    s <- sum(x)
+    res <- c(0, s)
+    if (x[1] > x[2]) res <- c(s, 0)
+    res
+  }))
+  
+  # final result in whole numbers
+  (o %/% 1) + lo
+  
+}, creel[["CYear"]], creel[["RiverPropBySex"]])
+
+```
+
+#### Bay Creel
+
+Though the output is identical (frequency table month x sex), the process to get there using Bay Creel data required slight modifications to include length cutoff (i.e., proportion measured all vs legal sized by month). Below we detailed the steps.
+
+(1) match records by month for proportion (measured all to cutoff) to `census_count`
+(2) multiply number censused (catch) by monthly proportion
+(3) get whole count & residual (rounded for simplicity)
+(4) sample months based on residual (uses `base::sample()`)
+(5) add step 4 with whole count in step 3
+(6) by month and using monthly sex ratio, `base::sample()` either 'm' or 'f' based on count in step 5
+(7) `base::factor()` step 6 then call `base::table()` on factored results
+
+```{r bay-catch-apportioned}
+
+# to apportion creel census catch by sex
+creel$BayCatchApportioned <- Map(f = function(y, bp, bx, cc = census_count) {
+  
+  # for subsetting inputs
+  b <- cc[["CYear"]] %in% y  & cc[["Type"]] %in% "bay"
+  
+  # for matching with census_count (i.e., total catch)
+  nms <- names(bp)
+  i <- match(as.numeric(nms), table = cc[b, "Month"])
+  
+  o <- cc[b, "CatchSum"][i] * bp
+  
+  cen <- o %/% 1
+  
+  b <- is.na(cen)
+  
+  # to hold the left over after integer division above, `lo` not likely to be a
+  # whole number, thus the call to round as `size` in sample() performs integer
+  # division if not a whole number; this is not a perfect solution but allows
+  # for at least one sample when lo would be < 1
+  lo <- round(sum(o %% 1, na.rm = TRUE), digits = 0)
+  
+  # print(cbind(lo, round(lo, digits = 0)))
+  
+  # assigning leftover (lo) to bay creel month (found in nms)
+  nms <- names(cen[!b])
+  p <- prop.table(cen[!b])
+  s <- sample(nms, size = lo, replace = TRUE, prob = p)
+  s <- factor(s, levels = names(cen))
+  
+  # add left over to whole counts
+  cen <- cen + table(s)
+  
+  dnms <- dimnames(bx)[[1]]
+  
+  # for each month we need to apportion sex, so we take monthly catch
+  # (frequency) and using sex ratio sample 'm' or 'f' accordingly; the result is
+  # table month x sex
+  res <- vapply(dnms, FUN = function(x) {
+    if (is.na(cen[[x]])) return(c(m = NA, f = NA))
+    s <- sample(c('m', 'f'), size = cen[[x]], replace = TRUE, prob = bx[x, ])
+    s <- factor(s, levels = c('m', 'f'))
+    table(s)
+  }, FUN.VALUE = numeric(2L))
+  
+  # for desired orientation of results
+  t(res)
+  
+}, creel[["CYear"]], creel[["BayPropMeasLegal"]], creel[["BayPropBySex"]])
+
+```
+
+### Age Composition: Creel
+
+Documented here are the final steps to get 'C' from creel data. This process uses proportion age x month and apportioned ('m' or 'f') census catch.
+
+#### Bay Creel
+
+Per month and by sex, we multiply census catch by proportion at age. This yields fractions of fish, so using `base::sample()` we randomly selected ages based on sum of residuals and proportions at age. The output is the whole number frequency at age plus residuals (of random sampling).
+
+```{r bay-agecom}
+
+creel$BayAgeCom <- Map(f = function(pam, app) {
+  
+  sex <- c('m', 'f')
+  
+  out <- lapply(sex, FUN = function(s) {
+    
+    dnms <- dimnames(pam[[s]])
+    
+    n <- length(dnms[[1]])
+    
+    vapply(dnms[[2]], FUN = function(dn) {
+      p <- pam[[s]][, dn]
+      size <- app[dn, s]
+      
+      if (is.na(size)) {
+        na <- rep(NA, times = n)
+        names(na) <- dnms[[1]]
+        return(na)
+      }
+      
+      o <- size * p
+      
+      # to get sample size for sampling below
+      sz <- round(sum(o %% 1, na.rm = TRUE), digits = 0)
+      
+      # to get ages for sampling
+      a <- as.numeric(names(p))
+      r <- sample(a, size = sz, replace = TRUE, prob = p)
+      # r <- sample(a, size = size, replace = TRUE, prob = p)
+      
+      # to add back to whole number of size * p
+      r <- factor(r, levels = dnms[[1]])
+      table(r) + (o %/% 1)
+      
+    }, FUN.VALUE = numeric(n))
+    # end vapply
+
+  })
+  # end lapply
+  names(out) <- sex
+  out
+  
+}, creel[["BayPropAgeMonth"]], creel[["BayCatchApportioned"]])
+
+```
+
+To get 'C', we simply summed the rows (ages) for ages 3-7, and then summed all ages &ge; 8. The results for each creel year is a 6 x 2 matrix (ages x sex).
+
+```{r bay-C}
+
+creel$BayC <- lapply(creel[["BayAgeCom"]], FUN = function(ac) {
+  
+  vapply(ac, FUN = function(x) {
+    a <- as.numeric(dimnames(x)[[1]])
+    r <- rowSums(x[a %in% 3:7, ], na.rm = TRUE)
+    c(r, `8p` = sum(x[a >= 8, ], na.rm = TRUE))
+  }, FUN.VALUE = numeric(6L))
+  
+})
+
+```
+
+#### River Creel
+
+For River Creel, we used the same process as Bay Creel. The output is the whole number frequency at age plus residuals (of random sampling).
+
+```{r rvr-agecom}
+
+creel$RvrAgeCom <- Map(f = function(pam, app) {
+  
+  sex <- c('m', 'f')
+  
+  out <- lapply(sex, FUN = function(s) {
+    
+    dnms <- dimnames(pam[[s]])
+    
+    n <- length(dnms[[1]])
+    
+    vapply(dnms[[2]], FUN = function(dn) {
+      p <- pam[[s]][, dn]
+      size <- app[dn, s]
+      if (is.na(size)) {
+        na <- rep(NA, times = n)
+        names(na) <- dnms[[1]]
+        return(na)
+      }
+      
+      o <- size * p
+      
+      # to get sample size for sampling below
+      sz <- round(sum(o %% 1, na.rm = TRUE), digits = 0)
+      
+      # to get ages for sampling
+      a <- as.numeric(names(p))
+      r <- sample(a, size = sz, replace = TRUE, prob = p)
+      # r <- sample(a, size = size, replace = TRUE, prob = p)
+      
+      # to add back to whole number of size * p
+      r <- factor(r, levels = dnms[[1]])
+      table(r) + (o %/% 1)
+      
+    }, FUN.VALUE = numeric(n))
+    # end vapply
+
+  })
+  # end lapply
+  names(out) <- sex
+  out
+  
+}, creel[["RvrPropAgeMonth"]], creel[["RvrCatchApportioned"]])
+
+```
+
+To get 'C', we simply summed the rows (ages) for ages 3-7, and then summed all ages &ge; 8. The results for each creel year is a 6 x 2 matrix (ages x sex). For River Creel, we needed an extra step to compensate for "missing" ages. The problem only happened once in the dataset (creel year 2009 for females). Essentially, if the output is not length = 6, then we checked which age was missing, and then added in its place a zero (0).
+
+```{r rvr-C}
+
+creel$RvrC <- lapply(creel[["RvrAgeCom"]], FUN = function(ac) {
+  
+  vapply(ac, FUN = function(x) {
+    if (length(x) == 0) {
+      e <- setNames(object = rep(NA, times = 6), nm = c(3:7, "8p"))
+      return(e)
+    }
+    a <- as.numeric(dimnames(x)[[1]])
+    r <- rowSums(x[a %in% 3:7, ], na.rm = TRUE)
+    r <- c(r, "8p" = sum(x[a >= 8, ], na.rm = TRUE))
+    
+    # needed for when not all ages are present (only once 2009 females)
+    if (length(r) != 6) {
+      # print(r)
+      b <- c(3:7, "8p") %in% names(r)
+      i <- which(!b)
+      r <- append(r, values = 0, after = i - 1)
+      names(r) <- c(3:7, "8p")
+    }
+    
+    r
+  }, FUN.VALUE = numeric(6L))
+})
+
+```
+
+### Recaptures: Creel
+
+Recaptures provide the 'R' for the abundance (*N*) algorithm. We used tagging data after assigning ages (i.e., `catch[["AgeAssign"]]`), as this process requires using age assigned at release. We match recapture data to the appropriate tagging (release) data (using tag number; see variable `new_data`). If a match, we extract year, sex, and age release data. The result is an array 6 x 1+ x 2 (ages x recapture year x sex) for each release year. The '1+' denotes at least one or more recapture years.
+
+```{r creel-recaps}
+
+# ******************************************************************************
+# need dataframe with all ages apportioned & all sex apportioned to get release
+# data from recaps in creel census, cannot use Tagging$StripedBass as age &
+# sex are apportioned at different stages in `catch` dataframe (05-Jun-2020)
+
+new_data <- do.call(
+  what = rbind,
+  args = lapply(catch[["AgeAssign"]], FUN = function(x) {
+    do.call(what = rbind, args = x)
+  })
+)
+
+year_sex <- do.call(
+  what = rbind,
+  args = strsplit(dimnames(new_data)[[1]], split = "\\.")
+)
+
+dimnames(year_sex) <- list(NULL, c("Year", "Sex", "Num"))
+
+new_data <- data.frame(
+  year_sex[, 1:2],
+  new_data,
+  stringsAsFactors = FALSE
+)
+
+# factoring for inclusion of all levels when calling `table()`
+new_data$Sex <- factor(new_data[["Sex"]], levels = c('m', 'f'))
+
+# lvls <- sort(unique(new_data[["Aged"]]), na.last = TRUE)
+lvls <- sort(unique(new_data[["Aged"]]))
+a8p <- length(8:max(lvls))
+new_data$Aged <- factor(
+  new_data[["Aged"]],
+  levels = lvls,
+  labels = c(2:7, rep("8p", times = a8p)),
+  exclude = NULL
+)
+# ******************************************************************************
+
+creel$Recaps <- lapply(creel[["Data"]], FUN = function(d) {
+  
+  s <- Split(
+    data = d,
+    subset = !is.na(TagNUM) & !(LenCat %in% "sub"),
+    splitVars = Type
+  )
+  
+  lapply(s[["Data"]], FUN = function(dd) {
+    b <- new_data[["TagActionF"]] %in% c("Ml", "Ms")
+    i <- match(dd[["TagNUM"]], table = new_data[["TagNum"]][b])
+    table(new_data[b, c("Aged", "Year", "Sex")][i, ], useNA = "ifany")
+  })
+})
+
+# clean up
+rm(lvls, new_data, year_sex, a8p)
+
+```

@@ -1,0 +1,1015 @@
+---
+
+---
+
+<!--
+TODO (14-May-2020):
+(1) split by year
+(2) count legal sized by gear type
+(3) days or months fished by gear
+(4) # traps or net sets --- not totally accurate for StripedBass dataset as   
+    DriftTrap only represents # traps where fisher were caught, not # traps   
+    fished
+(5) attempt to standardize as in Kohlhorst et al. 1992 (36 trap days, etc.)
+
+-->
+
+### Striped Bass Index
+
+Kohlhorst et al. (1992) developed an index using fyke trap and gill net effort and catch data. Effort was standardized to 36 trap-months (fykes) and to 4 boat-months (gill nets). Few details are available describing such methods. The best we can glean from hardcopy notes (Appendix 73 in Sportfish protocol) and other references (Stevens et al. 1985) suggests multiplying a correction factor (for effort) by catch yielded the index.
+
+#### Correction Factor
+
+Twelve fyke traps and two gill netting boats set the gear standard. Ninety-one (91) days for fykes and 44 days for boats set the duration standard. Fyke trap standardized days assumes 15 (Mar), 30 (Apr), 31 (May), and 15 (Jun) yielding 91d. It is not clear how team Kohlhorst arrived at 44d, but we can assume 22 days each in Mar & Apr.
+
+The correction factor (*CF*) is the ratio of standardized (gear * days) to actual (gear * days). Below we show the standardized values for fyke & gill net. The actual is derived by the same method given how many days fished multiplied by number of gear (e.g., fykes: 12 traps each fished 70d & 6 traps each fished 1d --> (70 * 12) + (1 * 6) = 846)
+
+Standardized
+$fyke = 91 \times 12 = 1092$  
+$gillnet = 44 \times 2 = 88$
+
+CF (using fyke example)  
+$CF = \frac{1092}{846} = 1.29$
+
+Stevens et al. (1985) defines trap-month as 30d 24-hour fishing fykes and boat-month as 20d 8-hour fishing gill nets. The use of 'month' and 'day' and the absence of gear quantity (e.g., 12 traps) is somewhat confusing (at least to me, anyway). I arrive at fyke 1080 (3m * 12 traps * 30) and gill net 80 (2m * 2 boats * 20). However, we record traps and gill nets by days fished (not months), so perhaps sticking with 1092 & 88 is more appropriate.
+
+At any rate, what we lack (currently) are electronically available effort data prior to ~1996. Until such data are entered into our database, the best we can do is get count of days (when we caught fish) and assume 12 traps and two gill netting boats. This is an ersatz for actual effort, but it will have to do for now.
+
+The correction factor is then multiplied by catch (respective for gear type) and the sum (fyke + gill net) becomes the index (catch per effort [CPE] index). For reference, we display Kohlhorst et al. (1992) values below.
+
+```{r cpe-kohlhorst}
+
+# from Kohlhorst et al. 1992
+cpe_kohlhorst <- matrix(
+  data = c(
+    1969:1989,
+    25447, 19623, 23207, 19812, 19898, 15075,
+    10691, 11930, NA, NA, 13249, 7394, NA,
+    6077, 6532, 5919, 8805, 9257, 9436, 9107,
+    11906
+  ),
+  ncol = 2, 
+  byrow = FALSE 
+)
+
+```
+
+```{r plot-cpe}
+
+p_cpe <- Plot(
+  x = cpe_kohlhorst[, 1],
+  y = cpe_kohlhorst[, 2]
+)
+
+p_cpe$grid(xRng = TRUE)
+points(p_cpe)
+
+Axis(p_cpe, side = 1, labelAdj = 0.25, interval = 5, offset = 1)
+y_axis_cpe <- Axis(p_cpe, side = 2, labelAdj = 0.4, format = TRUE)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = y_axis_cpe$AxisTitle(var = "Index"), side = 2, line = 1.5)
+mtext(
+  text = "Ref: Kohlhorst et al. 1992",
+  side = 3, 
+  line = 0,
+  adj = 1, 
+  col = "grey25",
+  cex = 0.75,
+  font = 3
+)
+
+```
+
+### Catch
+
+For our entire dataset, we can summarize annually total catch and number of days when Striped Bass were caught and then tagged. Below we show by gear total catch and days fished (where Striped Bass were caught and then tagged).
+
+*Notes*
+(1) this does not include sub-legal sized fish
+(2) gill netting ceased 2009, we gill netted only one day since (19-Apr-2011)
+(3) gill net catch from #2 12 legal-sized fish may not show on plot
+(4) effort data (available, but most not electronically so) would provide number of traps fished per day & for how long (hours); current tagging data provides only number of days when fish were tagged and --- for more recent years --- number of traps from which fish were tagged
+
+```{r catch-days-gear}
+
+# get catch & days fished by gear type (GN = gill net, FT = fyke trap)
+catch$CatchDays <- t(vapply(catch[["Data"]], FUN = function(d) {
+  
+  # so each gear type included in every year irrespective of whether or not gear
+  # was deployed in particular year (i.e., to include 0s)
+  d$CapMethod <- factor(d[["CapMethod"]], levels = 1:2)
+
+  # remove known sub-legal sized fish & split on cap method (gear type) for
+  # desired output of catch & num days sampled per gear type
+  d <- Split(
+    data = d,
+    subset = !LenCat %in% "sub",
+    vars = c(Count, RelDate),
+    splitVars = CapMethod
+  )
+  
+  # loop through gear type get catch & days sampled
+  out <- vapply(d[["Data"]], FUN = function(dd) {
+    if (nrow(dd) == 0) return(c(NA, NA))
+    c(sum(dd[[1]]), length(unique(dd[[2]])))
+  }, FUN.VALUE = numeric(2L))
+  
+  # to name columns & rearrange for desired output
+  names(out) <- c("GNCatch", "GNDays", "FTCatch", "FTDays")
+  out[c(1, 3, 2, 4)]
+
+}, FUN.VALUE = numeric(4L)))
+
+```
+
+```{r plot-catch-days-gear}
+
+# head(catch$CatchDays, n = 1)
+
+lo <- layout(mat = c(1, 2), heights = c(0.60, 0.40))
+# layout.show(n = lo)
+
+par(mar = c(0.25, 2, 1, 0.5), oma = c(0.25, 1, 1, 0.5))
+
+p_catch_gear <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["CatchDays"]][, c("GNCatch", "FTCatch")],
+  adjUsr = 0.5, 
+  y0 = TRUE
+)
+
+p_catch_gear$grid(xRng = TRUE)
+
+colft <- rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = 0.6)
+colgn <- rgb(red = 0.99, green = 0.54, blue = 0, alpha = 0.3)
+
+points(
+  x = p_catch_gear$data()[["x"]] - 0,
+  y = catch[["CatchDays"]][, "FTCatch"],
+  type = "h",
+  lend = 1,
+  lwd = 5,
+  col = colft
+)
+
+points(
+  x = p_catch_gear$data()[["x"]] + 0,
+  y = catch[["CatchDays"]][, "GNCatch"],
+  type = "h",
+  lend = 1,
+  lwd = 5,
+  col = colgn
+)
+
+# Axis(p_catch_gear, side = 1, labelAdj = 0.3, interval = 5, offset = 1)
+yaxis <- Axis(p_catch_gear, side = 2, labelAdj = 0.4, format = TRUE)
+
+mtext(text = yaxis$AxisTitle(var = "Count"), side = 2, line = 1.5)
+
+legend(
+  x = p_catch_gear[["xrng"]][[2]],
+  y = p_catch_gear[["yrng"]][[2]],
+  legend = c("FT", "GN"),
+  fill = c(colft, colgn), 
+  ncol = 2,
+  border = NA,
+  bty = "n",
+  xjust = 1,
+  yjust = 0.1,
+  xpd = TRUE
+)
+
+# plot days catching legal-sized Striped Bass
+
+par(mar = c(2, 2, 0, 0.5))
+
+p_catch_gear2 <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["CatchDays"]][, c("GNDays", "FTDays")],
+  adjUsr = 0.5, 
+  y0 = TRUE
+)
+
+p_catch_gear2$grid(xRng = TRUE)
+
+points(
+  x = p_catch_gear2$data()[["x"]] - 0,
+  y = catch[["CatchDays"]][, "FTDays"],
+  type = "h",
+  lend = 1,
+  lwd = 5,
+  col = colft
+)
+
+points(
+  x = p_catch_gear2$data()[["x"]] + 0,
+  y = catch[["CatchDays"]][, "GNDays"],
+  type = "h",
+  lend = 1,
+  lwd = 5,
+  col = colgn
+)
+
+Axis(p_catch_gear2, side = 1, labelAdj = 0.2, interval = 5, offset = 1)
+Axis(p_catch_gear2, side = 2, labelAdj = 0.4, interval = 2)
+
+mtext(text = "Year", side = 1, line = 1)
+mtext(text = "Days", side = 2, line = 1.5)
+
+# clean up
+rm(lo, colft, colgn, yaxis)
+
+```
+
+### Correction Factor Applied
+
+Here we applied the Kohlhorst et al. (1992) methodology to all fyke trap and gill net catch data. We developed the correction factor assuming 12 fykes traps and two gill netting boats. We then plot our time series along with numbers from Kohlhorst et al. (1992) and regressed both calculations for comparison (loess line added along with correlation coefficient [*r*]).
+
+```{r effort-correction-factor}
+
+# # months sampled * (# traps | # boats) * (trap-month | boat-month)
+# ft <- 3 * 12 * 30
+# gn <- 2 * 2 * 20
+
+ft <- 91 * 12
+gn <- 44 * 2
+
+# we assume fishing 12 traps & fishing two vessels each day for sampling
+# duration; here is where knowing count of traps fishing each day and count of
+# vessels fishing each day would help; electronically we only have days in which
+# fish were tagged so `FTDays` & `GNDays` are likely lower than actual
+catch$FTEffCorFactor <- ft / (catch[["CatchDays"]][, "FTDays"] * 12)
+catch$GNEffCorFactor <- gn / (catch[["CatchDays"]][, "GNDays"] * 2)
+
+```
+
+```{r catch-expanded}
+
+# here we multiply total catch by effort correction factor; in the early years
+# catch data are limited electronically (for now) to only tagged fish; then we
+# sum corrected catch to get catch per effort
+catch$CPE <- cbind(
+  FT = catch[["CatchDays"]][, "FTCatch"] * catch[["FTEffCorFactor"]],
+  GN = catch[["CatchDays"]][, "GNCatch"] * catch[["GNEffCorFactor"]]
+)
+
+```
+
+```{r plot-cpe-compare}
+
+lo <- layout(
+  mat = matrix(data = c(1, 1, 2, 0), ncol = 2),
+  widths = c(0.75, 0.25)
+)
+# layout.show(n = lo)
+
+par(mar = c(2, 2, 0.5, 1), oma = c(1, 1, 0.5, 0.5))
+
+p_cpe_new <- Plot(
+  x = catch[["RelYear"]],
+  y = range(
+    rowSums(catch[["CPE"]], na.rm = TRUE),
+    p_cpe$data()[["y"]], na.rm = TRUE
+  ),
+  adjUsr = 0.5
+)
+
+p_cpe_new$grid(xRng = TRUE)
+
+# add current cpe calculation
+# points(
+#   x = p_cpe_new$data()[["x"]], 
+#   y = rowSums(catch[["CPE"]], na.rm = TRUE),
+#   col = adjustcolor(col = "orange2", alpha.f = 0.9),
+#   type = "l"
+# )
+points(
+  x = p_cpe_new$data()[["x"]], 
+  y = rowSums(catch[["CPE"]], na.rm = TRUE),
+  col = adjustcolor(col = "orange2", alpha.f = 0.9),
+  lwd = 1.9
+)
+
+# add Kohlhorst points from 1992
+points(
+  x = p_cpe$data()[["x"]],
+  y = p_cpe$data()[["y"]],
+  col = adjustcolor(col = "grey20", alpha.f = 0.9),
+  pch = 4,
+  cex = 0.9
+)
+
+Axis(p_cpe_new, side = 1, labelAdj = 0.2, interval = 5, offset = 1)
+yaxis <- Axis(p_cpe_new, side = 2, labelAdj = 0.3, format = TRUE)
+
+mtext(text = "Year", side = 1, line = 1.3)
+mtext(text = yaxis$AxisTitle(var = "Index"), side = 2, line = 1.25)
+
+mtext(
+  text = "x denotes CPE values\nfrom Kohlhorst et al. 1992",
+  side = 4,
+  adj = -0.05, 
+  padj = 6, 
+  col = "grey25",
+  font = 3, 
+  cex = 0.75,
+  las = 2
+)
+
+# Kohlhorst et al. 1992
+
+par(mar = c(0.5, 1.5, 1.0, 1))
+
+p_cpe_compare <- Plot(
+  x = rowSums(
+    catch[["CPE"]][seq_along(p_cpe$data()[["x"]]), ], 
+    na.rm = TRUE
+  ),
+  y = p_cpe$data()[["y"]]
+)
+
+p_cpe_compare$grid()
+
+lines(
+  loess.smooth(
+    x = p_cpe_compare$data()[["x"]],
+    y = p_cpe_compare$data()[["y"]]
+  ), 
+  type = "l",
+  col = adjustcolor("steelblue", alpha.f = 0.7),
+  lwd = 2
+)
+
+points(p_cpe_compare, grid = FALSE, col = "grey25", cex = 1)
+
+xaxis <- Axis(p_cpe_compare, side = 1, labelAdj = 0.2, format = TRUE)
+yaxis <- Axis(p_cpe_compare, side = 2, labelAdj = 0.3, format = TRUE)
+
+mtext(
+  text = xaxis$AxisTitle(var = "CPE (current)"),
+  side = 1,
+  line = 1.0, 
+  cex = 0.75
+)
+
+mtext(
+  text = xaxis$AxisTitle(var = "CPE (Kohlhorst)"),
+  side = 2,
+  line = 1.2,
+  cex = 0.75
+)
+
+# names(loess(formula = ycpe ~ xcpe))
+
+cpe_cor <- cor.test(
+  x = p_cpe_compare$data()[["x"]],
+  y = p_cpe_compare$data()[["y"]]
+)
+
+mtext(
+  text = sprintf(
+    fmt = "r = %.2f | p = %.6f", 
+    cpe_cor[["estimate"]],
+    cpe_cor[["p.value"]]
+  ),
+  side = 3, 
+  line = 0,
+  adj = 1, 
+  cex = 0.75,
+  col = "grey25",
+  font = 3
+)
+
+```
+
+### Catch per Trap-Hour
+
+Here we look at catch-per-unit-effort (where unit effort = trap-hour) for fyke traps 2010-2013, 2015-2019. We single-out fyke traps because for the chosen period, we only gill netted one day (in 2011). Further, for this period we have the required effort data: time set to time pulled per trap per day.
+
+We define trap-hour as one trap fishing for one hour. For this purpose, we used daily totals. For example, 10 traps each fished 24h equals 240 trap-hours for that day. Catch was also totaled daily. So, if the 10 traps collectively caught 240 Striped Bass, catch-per-trap-hour would equal 1.
+
+#### Catch
+
+We used data in `data/StripedBass`, split on `RelYear` (release year; using `sportfish::Split()`), and assigned the results to `cpue_fyke`. We did not release tags in 2014, and 2015 catch was abysmal (< 500 Striped Bass).
+
+```{r cpue-fyke}
+
+# head(catch$Data[["2019"]])
+
+cpue_fyke <- Split(
+  data = Tagging[["StripedBass"]],
+  subset = CapMethod %in% 2 & RelYear >= 2010, 
+  vars = c(RelDate, RelFL, RelSex0, LenCat, DriftTrap, Count), 
+  splitVars = RelYear
+)
+
+# for desired data type
+cpue_fyke$RelYear <- as.numeric(cpue_fyke[["RelYear"]])
+
+```
+
+```{r total-catch}
+
+cpue_fyke$TotalCatch <- vapply(cpue_fyke[["Data"]], FUN = function(d) {
+  sum(d[["Count"]])
+}, FUN.VALUE = numeric(1L))
+
+```
+
+```{r fork-len-range}
+
+cpue_fyke$LenRange <- t(vapply(cpue_fyke[["Data"]], FUN = function(d) {
+  l <- Filter(f = function(x) x > 0 & !is.na(x), x = d[["RelFL"]])
+  range(l)
+}, FUN.VALUE = numeric(2L)))
+
+```
+
+Because age data is not yet available for our period (the 2010s), we binned fork lengths for the purpose of calculating CPUE given length class. Length bins began with the period minimum (`r min(cpue_fyke[["LenRange"]])` cm FL) to 34, 35 to 41, 42 to 83 by 3 cm each, and &ge; 84 cm FL. Fish &ge; 42 cm FL are legal-sized. *Note*: for some fish length was not recorded and thus assigned to bin `un` (unknown). We could, of course, assign a bin to each of these fish given the proportion of fish in each known bin. But currently we have not pursued this option.
+
+```{r data-expanded}
+
+# range(cpue_fyke[["LenRange"]])
+fl_min <- min(cpue_fyke[["LenRange"]])
+
+# because not many fish from min_fl to 34 & not many fish over 80 cm FL
+# bins <- c(fl_min, seq(from = 35, to = 80, by = 3), Inf)
+# bins <- c(seq(from = fl_min, to = 80, by = 10), Inf)
+bins <- c(fl_min, 35, seq(from = 42, to = 85, by = 3), Inf)
+
+# because need to expand data on `Count` field & bin fork lengths
+cpue_fyke$DataExp <- lapply(cpue_fyke[["Data"]], function(d) {
+  
+  # Frequency(l, binWidth = 5, xRange = c(22, 120))
+  
+  # need to expand data on `Count` field to get complete number of fish
+  o <- data.frame(
+    lapply(d, FUN = rep, times = d[["Count"]]),
+    stringsAsFactors = FALSE
+  )
+  
+  # sets any 0s to NA, as 0 is not a real length
+  b <- o[["RelFL"]] %in% 0
+  o[b, "RelFL"] <- NA
+  
+  # bin lengths as set in `bins` variable
+  o$LenBins <- cut(
+    o[["RelFL"]], 
+    breaks = bins, 
+    include.lowest = TRUE,
+    right = FALSE,
+    labels = c(bins[-length(bins)])
+  )
+
+  # because we want to se NA as "un" - unknown
+  o$LenBins <- addNA(o[["LenBins"]])
+  levels(o[["LenBins"]])[is.na(levels(o[["LenBins"]]))] <- "un"
+  
+  # because `Count` field is irrelevant now
+  o$Count <- NULL
+  
+  # simply output expanded data with LenBins field
+  o
+})
+# end lapply
+
+# chunk clean up
+# rm(fl_min, bins)
+rm(fl_min)
+
+# vapply(cpue_fyke[["DataExp"]], FUN = function(d) {
+#   sum(is.na(d[["DriftTrap"]]))
+# }, FUN.VALUE = numeric(1L))
+
+# lapply(cpue_fyke[["DataExp"]], FUN = function(d) {
+#   table(d[["DriftTrap"]], useNA = "ifany")
+#   # typeof(d[["DriftTrap"]])
+# })
+
+# table(cpue_fyke$DataExp[["2017"]][["LenBins"]], useNA = "ifany")
+
+```
+
+```{r data-exp-trap-num-set}
+
+# less than ideal but chunk uses random sample to assign trap number; this
+# really mostly affects 2010, and through data entry of trap number for tagged
+# fish this problem will be solved (mostly)
+
+cpue_fyke$DataExp <- lapply(cpue_fyke[["DataExp"]], FUN = function(d) {
+  
+  b <- is.na(d[["DriftTrap"]])
+  
+  p <- prop.table(table(d[["DriftTrap"]]))
+  size <- sum(b)
+  trps <- as.numeric(names(p))
+  
+  set.seed(8664)
+  ft <- sample(trps, size = size, replace = TRUE, prob = p)
+  
+  d[b, "DriftTrap"] <- ft
+  
+  d
+})
+
+```
+
+We tallied catch for each bin by date and trap. We included a total (`Tot`; sum of all bins) field as well. By bin and trap provides the option to summarize by date only.
+
+```{r cpue-fyke-catch}
+
+cpue_fyke$Catch <- lapply(cpue_fyke[["DataExp"]], FUN = function(d) {
+  
+  # not ideal but need to deal with no trap number; some are not available on
+  # datasheets but some need to be entered (like those for 2010)
+  d$DriftTrap[is.na(d[["DriftTrap"]])] <- 99L
+  
+  # to get frequency per length bin by date & trap number
+  s <- Split(
+    data = d, 
+    vars = LenBins,
+    splitVars = c(RelDate, DriftTrap), 
+    drop = TRUE
+  )
+  
+  # for desired datatype
+  s$RelDate <- as.POSIXct(s[["RelDate"]])
+  s$DriftTrap <- as.integer(s[["DriftTrap"]])
+  
+  # for FUN.VALUE in vapply loop below
+  n <- nlevels(d[["LenBins"]])
+  
+  # to tabulate length bins with total
+  s$BinFreq <- t(vapply(s[["Data"]], FUN = function(dd) {
+    l <- table(dd[["LenBins"]])
+    c(l, Tot = sum(l))
+  }, FUN.VALUE = numeric(n + 1)))
+  
+  # for now output dataframe
+  s
+})
+# end lapply
+
+# # un-comment to check all hopefully should be 0
+# vapply(cpue_fyke$Catch, FUN = function(d) {
+#   sum(is.na(d[["DriftTrap"]]) | d[["DriftTrap"]] %in% 99)
+# }, FUN.VALUE = numeric(1L))
+
+```
+
+#### Effort
+
+Find such data in `data/Tagging/Effort.rds`. Relevant fields are `RelYear`, `RelDate`, `DriftTrap`, `StartTime`, `EndTime`, and `CapMethod`. `StartTime` and `EndTime` are given as date-time and denote the date & time each trap was set and pulled. `CapMethod` (or capture method) denotes gear type (1 = gill net; 2 = fyke trap). Here will filter data on `RelYear` &ge; 2010 and `CapMethod` = 2. We assign such data as field `Effort` in `cpue_fyke`.
+
+```{r effort-data}
+
+# head(Tagging$Effort)
+
+# after splitting data we need only the list-column "Data"
+cpue_fyke$Effort <- Split(
+  data = Tagging[["Effort"]],
+  subset = RelYear >= 2010 & CapMethod %in% 2,
+  vars = -c(RelYear, CapMethod),
+  splitVars = RelYear,
+  drop = TRUE
+)[["Data"]]
+
+```
+
+Next, we summarize effort data by release date and trap number. We use `sportfish::EffortSb()` to calculate hours fishes along with variance and other metrics. We assign such data as field `EffDateTrap` in `cpue_fyke`. We do likewise by release date and assign such data as field `EffDate` in `cpue_fyke`.
+
+```{r effort-date-trap}
+
+cpue_fyke$EffDateTrap <- lapply(cpue_fyke[["Effort"]], FUN = function(d) {
+  
+  # split to get data by date & trap
+  s <- Split(data = d, splitVars = c(RelDate, DriftTrap))
+  
+  s$Hours <- vapply(s[["Data"]], FUN = function(dd) {
+    e <- EffortSb(
+      data = dd,
+      sTime = StartTime,
+      eTime = EndTime,
+      netNum = DriftTrap
+    )
+    e[["Hours"]]
+  }, FUN.VALUE = numeric(1L))
+  # end vapply
+  
+  # for desired data type
+  s$RelDate <- as.POSIXct(s[["RelDate"]])
+  s$DriftTrap <- as.integer(s[["DriftTrap"]])
+  
+  # not needed in output
+  s$Data <- NULL
+  s
+})
+# end outer lapply
+
+```
+
+```{r effort-date}
+
+# effort by date
+cpue_fyke$EffDate <- lapply(cpue_fyke[["Effort"]], FUN = function(d) {
+  
+  # split to get data by date & trap
+  s <- Split(data = d, splitVars = RelDate)
+  
+  s$E <- t(vapply(s[["Data"]], FUN = function(dd) {
+    e <- EffortSb(
+      data = dd,
+      sTime = StartTime,
+      eTime = EndTime,
+      netNum = DriftTrap
+    )
+    
+    # desired output - unlisted
+    c(
+      e[c("Hours", "HoursVar", "NetSets")],
+      recursive = TRUE
+    )
+    
+  }, FUN.VALUE = numeric(3L)))
+  # end vapply
+
+  # for convenience of clean output (dataframe)
+  s <- data.frame(as.POSIXct(s[["RelDate"]]), s[["E"]])
+  rownames(s) <- NULL
+  colnames(s) <- c("RelDate", "Hours", "Var", "Traps")
+  s
+})
+# end lapply
+
+```
+
+We display annually total hours fished. For reference, the upper x-axis displays number of days fish with the maximum number of traps fished on any given day.
+
+```{r plot-effort}
+
+p_effort <- Plot(
+  x = cpue_fyke$RelYear,
+  y = vapply(cpue_fyke[["EffDate"]], FUN = function(e) {
+    sum(e[["Hours"]])
+  }, FUN.VALUE = numeric(1L)),
+  y0 = TRUE, 
+  adjUsr = 0.75
+)
+
+p_effort$grid(xRng = TRUE)
+
+points(
+  p_effort,
+  type = "h",
+  grid = FALSE,
+  lwd = 20, 
+  col = grey(level = 0.25, alpha = 0.55)
+)
+
+Axis(p_effort, side = 1, labelAdj = 0.2, interval = 2)
+yaxis <- Axis(p_effort, side = 2, labelAdj = 0.4, format = TRUE)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = yaxis$AxisTitle(var = "Trap-hours"), side = 2, line = 1.2)
+
+# ugly code but places num days fished & max number traps / day on upper x-axis
+mtext(
+  text = apply(
+    vapply(cpue_fyke[["EffDate"]], FUN = function(e) {
+      c(
+        Days = paste0(dim(e)[[1]], "d"),
+        MaxTraps = max(e[["Traps"]])
+      )
+    }, FUN.VALUE = character(2L)),
+    MARGIN = 2, 
+    FUN = paste0, 
+    collapse = "\n"
+  ),
+  side = 3,
+  line = 0,
+  at = cpue_fyke[["RelYear"]],
+  cex = 0.75,
+  col = "grey30"
+)
+
+```
+
+#### Daily CPUE
+
+We calculate catch per trap-hour. For each release date we get total catch and total hours fished for all traps fishing that day.CPUE is then catch divided by hours (equation below).
+
+$CPUE_d=\frac{\sum_dC{_{t}}}{\sum_dH{_{t}}}$
+
+where *t* = trap and *d* = day
+
+```{r cpue-daily}
+
+# to get daily cpue by release year
+cpue_fyke$CpueDaily <- Map(f = function(a, e) {
+  
+  # catch by date; colSums() because `BinFreq` is a matrix where rows by release
+  # date|trap and columns by all bins & un & Tot
+  cd <- aggregate(
+    a[["BinFreq"]],
+    by = a["RelDate"],
+    FUN = function(x) colSums(as.matrix(x))
+  )
+  
+  # to get proper catch from cd dataframe above
+  i <- match(e[["RelDate"]], table = cd[["RelDate"]])
+  
+  # for matching if cpue by date & trap if desired
+  # i <- match(
+  #   Reduce(f = paste, x = e[c("RelDate", "DriftTrap")]),
+  #   table = Reduce(f = paste, x = a[c("RelDate", "DriftTrap")])
+  # )
+  
+  # output as dataframe merely for convenience
+  data.frame(
+    Date = e[["RelDate"]],
+    TotCatch = cd[i, "Tot"],
+    Hours = e[["Hours"]],
+    CPUE = cd[i, "Tot"] / e[["Hours"]]
+  )
+  
+}, a = cpue_fyke[["Catch"]], e = cpue_fyke[["EffDate"]])
+# end Map
+
+```
+
+Below we display daily catch per trap-hour (x-axis noise added to mitigate over-plotting) and annual daily average (orange point). Number of days fished is shown on the upper x-axis.
+
+```{r plot-cpue-daily, warning=FALSE}
+
+# for y-axis range in plot below
+rng_cpue <- vapply(cpue_fyke[["CpueDaily"]], FUN = function(d) {
+  range(d[["CPUE"]], na.rm = TRUE)
+}, FUN.VALUE = numeric(2L))
+
+# to produce empty plot on which cpue daily points & average will be displayed
+p_cpue <- Plot(
+  x = cpue_fyke[["RelYear"]],
+  y = rng_cpue
+)
+
+p_cpue$grid(xRng = TRUE)
+
+# to plot daily points & average for each release year
+cpue_fyke$CpueDailyStats <- Map(f = function(yr, d) {
+  
+  x <- rep(yr, times = nrow(d))
+  ds <- DescStat(d[["CPUE"]])
+  
+  # add daily cpue with jitter for better display of each point
+  points(
+    x = jitter(x, factor = 0.005),
+    y = d[["CPUE"]],
+    pch = 19,
+    col = rgb(red = 0, green = 0, blue = 0.1, alpha = 0.2)
+  )
+  
+  # display annual average
+  points(
+    x = yr,
+    y = ds[["Avg"]],
+    col = "orange2",
+    pch = 20,
+    cex = 2
+  )
+
+  # display number of days fished
+  mtext(
+    text = paste0(ds[["NAll"]], "d"),
+    side = 3, 
+    line = 0, 
+    at = yr,
+    cex = 0.75,
+    col = "grey30"
+  )
+  
+  # return descriptive stats for each release year
+  ds
+  
+}, yr = cpue_fyke[["RelYear"]],  d= cpue_fyke[["CpueDaily"]])
+# end Map
+
+Axis(p_cpue, side = 1, labelAdj = 0.3, interval = 2)
+Axis(p_cpue, side = 2, labelAdj = 0.4)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Catch / trap-hour", side = 2, line = 1.2)
+
+# clean up
+rm(rng_cpue)
+
+# un-comment as needed; provided number of days fished (NAll) & number days
+# catching|handling fish
+# vapply(cpue_fyke[["CpueDailyStats"]], FUN = function(d) {
+#   c(NAll = d[["NAll"]], N = d[["N"]])
+# }, FUN.VALUE = numeric(2L))
+
+```
+
+#### Length Bin CPUE
+
+We use length class (bins) as a surrogate for age class. Here we calculate CPUE by length bin to observe annual variations by size class. Again, we summarize catch by release date, and then divide catch (per bin) by daily hours fish (i.e., total hours for all traps fishing in a given day). The blue 'x' indicates maximum annual CPUE. For most years, bin 35-41 cm FL had the highest CPUE.
+
+```{r cpue-avg-by-bin}
+
+cpue_fyke$CpueAvgBin <- Map(f = function(a, e) {
+  
+  # catch by date; colSums() because `BinFreq` is a matrix where rows by release
+  # date|trap and columns by all bins & un & Tot
+  cd <- aggregate(
+    a[["BinFreq"]],
+    by = a["RelDate"],
+    FUN = function(x) colSums(as.matrix(x))
+  )
+  
+  # to get only numerically labeled columns (i.e., the length bins)
+  b <- grepl(pattern = "\\d", x = colnames(cd))
+  
+  # to get proper catch from cd
+  i <- match(e[["RelDate"]], table = cd[["RelDate"]])
+  
+  # to get daily average by length bin
+  colMeans(cd[i, b] / e[["Hours"]], na.rm = TRUE)
+  
+}, a = cpue_fyke[["Catch"]], e = cpue_fyke[["EffDate"]])
+# end Map
+
+```
+
+```{r rng-cpue-bin, eval=FALSE}
+
+# not needed for now (3-Jul-2020) but may use in plot below
+
+rng_cpue_bin <- vapply(
+  cpue_fyke[["CpueAvgBin"]],
+  FUN = range,
+  FUN.VALUE = numeric(2L)
+)
+
+range(rng_cpue_bin)
+
+# vapply(
+#   cpue_fyke[["CpueAvgBin"]],
+#   FUN = length,
+#   FUN.VALUE = numeric(1L)
+# )
+
+```
+
+```{r plot-cpue-bin, fig.asp=1.0}
+
+lo <- layout(mat = c(2, 1), heights = c(1, 7))
+# layout.show(n = lo)
+
+# for y-range and y-axis tick labels
+binsc <- as.character(bins[!is.infinite(bins)])
+
+# establish inner & outer margins for main plot
+par(mar = c(2, 2, 0.25, 1), oma = c(1.5, 0.5, 0.75, 0.5))
+
+p_cpue_bin <- Plot(
+  x = cpue_fyke[["RelYear"]],
+  y = seq_along(binsc), 
+  adjUsr = 1.5
+)
+
+p_cpue_bin$grid(xRng = TRUE, yRng = TRUE)
+
+cpue_fyke$CpueBinColors <- Map(f = function(yr, d) {
+  
+  # to define sides for rectangle below (rect())
+  y <- seq_along(d)
+  x <- rep(yr, times = length(y))
+  adj <- 0.5
+  
+  # alpha supplied to rgb() & need to be <= 1
+  alpha <- sqrt(d)
+  # alpha <- d / max(rng_cpue_bin)
+  # alpha <- d / diff(range(rng_cpue_bin))
+  
+  col_tile <- rgb(red = 0.99, green = 0.54, blue = 0, alpha = alpha)
+  # below is blue color - if desired
+  # col_tile <- rgb(red = 0.27, green = 0.50, blue = 0.70, alpha = alpha)
+  
+  # create tile or heatmap plot
+  rect(
+    xleft = x - adj,
+    ybottom = y - adj,
+    xright = x + adj,
+    ytop = y + adj,
+    col = col_tile,
+    border = NA
+  )
+  
+  # for making legend
+  cbind(Val = d, Col = col_tile)
+  
+}, yr = p_cpue_bin$data()[["x"]], d = cpue_fyke[["CpueAvgBin"]])
+# end Map
+
+# a possibility to show which bin had max cpue within year
+points(
+  x = cpue_fyke$RelYear,
+  y = vapply(cpue_fyke[["CpueAvgBin"]], FUN = function(d) {
+    which.max(d)
+  }, FUN.VALUE = numeric(1L)),
+  col = "steelblue",
+  pch = 4,
+  cex = 0.75
+)
+
+# for range summary needed for xaxis in plot below
+cpue_fyke$CpueBinRanges <- t(
+  vapply(
+    cpue_fyke[["CpueBinColors"]], 
+    FUN = function(x) range(as.numeric(x[, "Val"])),
+    FUN.VALUE = numeric(2L)
+  )
+  # end vapply
+)
+
+Axis(p_cpue_bin, side = 1, labelAdj = 0.3, interval = 2)
+# Axis(p_cpue_bin, side = 1, labelAdj = 0.3)
+
+# custom to show bin level at each y-axis tick
+axis(
+  side = 2,
+  at = p_cpue_bin$data()[["y"]],
+  labels = binsc,
+  col = "transparent",
+  col.ticks = "grey50",
+  col.axis = "grey50",
+  cex.axis = 0.9,
+  las = 1,
+  tcl = -0.2
+)
+
+# only needed for minor ticks if grid (above) not used
+# axis(
+#   side = 1,
+#   at = p_cpue_bin$data()[["x"]][p_cpue_bin$data()[["x"]] %% 2 == 1],
+#   labels = NA,
+#   col = "transparent",
+#   col.ticks = "grey50",
+#   las = 1,
+#   tcl = -0.2
+# )
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = "Length bin (catch / trap-hour)", side = 2, line = 1.4)
+
+# for color bar ****************************************************************
+
+par(mar = c(0.75, 1, 1.25, 0.25)) #, oma = c(0.5, 0.5, 0.5, 0.5)
+
+p_cpue_bin_bar <- Plot(
+  x = cpue_fyke[["CpueBinRanges"]],
+  y = c(0.99, 1.01), 
+  adjUsr = 1
+)
+
+# p_cpue_bin_bar$grid()
+# p_cpue_bin_bar$xticks()
+
+# to establish x values where alpha = sqrt(xs)
+n <- length(p_cpue_bin_bar$data()[["x"]]) * 1L
+xs <- seq(
+  from = p_cpue_bin_bar[["xrng"]][[1]],
+  to = p_cpue_bin_bar[["xrng"]][[2]], 
+  length.out = n
+)
+
+# for height of color bar within plot
+ys <- p_cpue_bin_bar[["yrng"]] #+ c(0.008, -0.008)
+
+rect(
+  # xleft = c(0, xs[-n]),
+  # xleft = xs[-length(xs)],
+  xleft = xs[-n],
+  ybottom = ys[[1]],
+  # xright = xs,
+  xright = xs[-1],
+  ytop = ys[[2]], 
+  col = rgb(red = 0.99, green = 0.54, blue = 0, alpha = sqrt(xs)), 
+  border = NA
+)
+
+Axis(p_cpue_bin_bar, side = 3, labelAdj = 0.3, cexAxis = 0.75)
+mtext(
+  text = "Catch / trap-hour color bar",
+  side = 1, 
+  line = -0.2, 
+  cex = 0.75, 
+  col = "grey50", 
+  font = 3
+)
+
+# clean up
+rm(binsc, xs, ys, n)
+
+```

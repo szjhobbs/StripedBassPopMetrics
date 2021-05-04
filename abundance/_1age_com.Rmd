@@ -1,0 +1,460 @@
+---
+
+---
+
+<!-- Tagging Data -->
+<!-- (1) add field for length category (unk, sub, leg) -->
+<!-- (2) expand dataframe on count field (could do #1 after this) -->
+<!-- (3) Apply `AgeEach()` to expanded dataframe (use bin width = 1, but may -->
+<!--     want to try binning very small & very large fish in bigger bins) -->
+<!--     (a) should then have number that cannot be aged -->
+<!--     (b) identify those that cannot be aged and possibly assign to age -->
+<!--         based on closes bin (for example fish 100 assigned age-10, bu -->
+<!--         fish 105 only one in bin & has no age could be age-10 too) -->
+<!--     (c) complete table(is.na(Ages), `LenCat`,useNA = "ifany") to -->
+<!--         help with 'b' -->
+<!--     (d) the point is to age as many as possible -->
+<!-- (4) somewhere in the process inlcude only legal sized fish [maybe] -->
+<!-- (5) table by age of fish tagged & all others (needed to get RAC) -->
+<!-- (6) then get C for (M*C)/R -->
+<!-- (7)  -->
+
+<!-- Consider -->
+<!-- (1) if not already, set sex to M, F, U OR 1, 2, 0 (need to include unknown) -->
+<!-- (2) what to do with age (i.e, set as factor from 2 to max) -->
+<!-- (3) what to do with length (weed out odd lengths e.g., 9) & do I -->
+<!--     set as factor? -->
+
+<!-- (5) After expanding & (perhaps) application of `AgeEach()` -->
+<!--     a. then get lengths with no age -->
+<!--     b. then get count no length & no age -->
+<!--     c. then get count all legal sized (by tag action) -->
+<!--     d. then get count recaps -->
+<!--     e.  -->
+
+<!--  big problem is how to programmatically assign age to fish when none -->
+<!--     were aged at that length (kind of becomes a classification problem) -->
+
+<!-- (5) split by year -->
+<!-- (6)  -->
+
+<!-- 13-May-2020 -->
+<!-- for now this gets us through age-composition for trap & gill net data only; still need to pursue creel census data;  -->
+
+<!-- TODO (13-May-2020): -->
+<!-- (1) use set.seed() for before sample() -->
+<!-- (2) decide where to put variables (functions) within chunk al-key below -->
+<!-- (3) be clear for recaptured fish which sex to use (right now I am using -->
+<!--     sex assigned at release (tagging) but it appears they might have made -->
+<!--     a judgment call here (see AGE_COM_2005_Tagging) -->
+<!-- (4) define well the various steps used herein -->
+
+### Fields & Factoring
+
+To facilitate analytics, we added fields or converted to factor (`base::factor()`) some existing fields in data set `StripedBass` (see 'data/tagging/StripedBass.rds'). Conversion to factor ensure all levels of some variable 'x' are present, for example when calling `base::table()`.
+
+#### Field *LenCat*
+
+Short for length category, *LenCat* assigns either `sub`, `leg`, or `unk` based on fork length. Sub-legal (`sub`) is any length less than 38 cm FL prior to 1982, or any length less than 42 cm FL 1982 forward. Legal (`leg`) is any length not sub-legal, and unknown (`unk`) could not be categorized (i.e., no length available). Adding this field facilitates filtering (removing) sub-legal sized fish from the analysis. See `sportfish::LengthGroup()` for more details.
+
+```{r length-cat}
+
+# to categorize each length as sub-legal, legal, or unk
+Tagging$StripedBass$LenCat <- LengthGroup(
+  data = Tagging[["StripedBass"]],
+  year = RelYear,
+  fl = RelFL,
+  regTable = "sb"
+)
+
+```
+
+#### Factoring Fields *Sex* & *TagAction*
+
+The CDFW Striped Bass database stores `1` for male, `2` for female, and blank for unknown (i.e., not recorded). We set field `Sex` to a factor using levels `m` (male), `f` (female), and `u` (unknown).
+
+The field `TagAction` (short for tagging action) was added ~2011 when we upgraded from dBase to MS Access. The upgrade allowed for entry of fish other than those that were disc tagged. So, `TagAction` provided a means to distinguish between tagged fish, recaptured fish, and non-tagged fish. Seven numerical (1-7) categories exist, with '1' representing a disc tag.
+
+The list of factor levels is provided below. Because in ~2010 we began tagging sub-legal sized fish, here we added two levels for distinguishing these fish from legal sized. The numeric database equivalent is provided in parentheses. `Un` or unknown is likely a data entry error (and should be corrected), as all fish should have a 1-7 labeling.
+
+- Ml (1) = marked legal sized fish
+- Ms (1) = marked sub-legal sized fish
+- S  (4) = sub-legal sized, not marked
+- O  (5) = over, no info recorded
+- D  (6) = dead or floater
+- C  (7) = creeled (beginning ~2010; fish measured & sexed but not tagged)
+- R2 (2) = recaptured fish returned to water with disc tag intact
+- R3 (3) = tag recovered not attached to fish (likely not many of these)
+- Un (-) = tagging action unknown
+
+```{r factors-setting}  
+
+# for splitting evenly per tagging year
+Tagging$StripedBass$RelSex <- factor(
+  Tagging[["StripedBass"]][["RelSex"]],
+  levels = c(1, 2, NA),
+  labels = c('m', 'f', 'u'),
+  exclude = NULL
+)
+
+# note: data entry some RelSex entered as `4` so here still NA need to change in
+# database (11-May-2020)
+Tagging$StripedBass$RelSex[is.na(Tagging$StripedBass$RelSex)] <- "u"
+
+# for factoring of Tagging Action field - used in ageing & abundance process
+b <- with(data = Tagging[["StripedBass"]], expr = {
+  
+  # for years prior to Tagging Action code 1 available; all records with a tag
+  # number & tagging action is NA are 1 (i.e., these fish were tagged)
+  b1 <- !(TagNum %in% "") & is.na(TagAction)
+  
+  # to identify sub-legals taggd
+  b2 <- (TagAction %in% '1' | b1) & LenCat %in% "sub"
+  
+  list(tag = b1, stag = b2)
+})
+
+# for splitting evenly per tagging year
+Tagging$StripedBass$TagAction[b[["tag"]]] <- '1'
+Tagging$StripedBass$TagAction[b[["stag"]]] <- '1s'
+
+# # any NAs at this point are likely entry error
+# table(
+#   Tagging$StripedBass$RelYear,
+#   Tagging$StripedBass$TagAction,
+#   useNA = "ifany"
+# )
+
+# labels for factoring below
+# Ml = marked legal sized fish
+# Ms = marked sub-legal sized fish
+# S  = sub-legal sized, not marked
+# O  = over, no info recorded
+# D  = dead or floater
+# C  = creeled (beginning ~2010)
+# R2 = recaptured fish returned to water with disc tag intact
+# R3 = tag recovered not attached to fish (likely not many of these)
+# Un = tagging action unknown - CHECK - likely data entry error
+
+Tagging$StripedBass$TagActionF <- factor(
+  Tagging[["StripedBass"]][["TagAction"]],
+  levels = c(1, "1s", 4:7, 2:3, NA),
+  labels = c("Ml", "Ms", "S", "O", "D", "C", "R2", "R3", "Un"),
+  exclude = NULL
+)
+
+```
+
+#### Fields *Sex* & *Age*
+
+The abundance estimate algorithm requires recaptured fish (denoted with *R*; i.e., a previously tagged fish). For these fish, the CDFW protocol uses sex at release (tagging) and age as release age + number of years at large. We create fields `Sex0` and `Age0` to house the desired sex and age given fish status (i.e., tagged or recaptured). Doing so preserves the original sex & age fields.
+
+```{r recaps-age_sex}
+
+# TODO: check rec[is.na(i), ] - 295892 tag present as recap with no release
+# info; removed here until raw datasheets can be reviewed (13-May-2020)
+
+Tagging$StripedBass <- subset(
+  Tagging[["StripedBass"]],
+  subset = !TagNum %in% "295892"
+)
+
+# to get only recaptured fish (tagging action = 2)
+b_rec <- Tagging[["StripedBass"]][["TagAction"]] %in% 2
+
+# for matching with non-recaps
+rec <- Tagging[["StripedBass"]][b_rec, ]
+
+# to get release info from recaptured fish
+i <- match(
+  rec[["TagNum"]],
+  table = Tagging[["StripedBass"]][["TagNum"]][!b_rec]
+)
+
+# to set up fields that will be used to hold appropriate age & sex info for
+# recaptured fish (i.e., the protocol for abundance estimates has been to use
+# release age+#years at large for age & release sex for recaptured fish)
+Tagging$StripedBass$RelSex0 <- Tagging[["StripedBass"]][["RelSex"]]
+Tagging$StripedBass$RelAge0 <- Tagging[["StripedBass"]][["RelAge"]]
+
+Tagging$StripedBass <- within(data = Tagging[["StripedBass"]], expr = {
+  
+  # (recapture year - release year) + release age = age @ recapture
+  RelAge0[b_rec] <- (RelYear[b_rec] - RelYear[!b_rec][i]) + RelAge[!b_rec][i]
+  # using release sex for recaptured sex
+  RelSex0[b_rec] <- RelSex[!b_rec][i]
+  # if i=NA, then no positive match so use recaptured sex
+  RelSex0[b_rec][is.na(i)] <- RelSex[b_rec][is.na(i)]
+  
+})
+
+# Tagging[["StripedBass"]][b_rec, "RelSex0"][is.na(i)]
+# Tagging[["StripedBass"]][!b_rec, "RelSex"][is.na(i)]
+
+# section clean up
+rm(b_rec, rec, i)
+
+```
+
+### Data Partitioning: *StripedBass* dataset
+
+We generate abundance estimates for every release year (tagging year; field `RelYear`). Using `sportfish::Split()`, we divide dataset `StripedBass` on each release year, the results of which we give variable name `catch`. `catch` has two fields: 'RelYear'; 'Data' a list column, where each element is the data (same fields as `StripedBass`) for the appropriate release year. 
+
+```{r split-year}
+
+catch <- Split(
+  data = Tagging[["StripedBass"]],
+  # vars = ,
+  splitVars = RelYear
+)
+
+# for desired datatype
+catch$RelYear <- as.numeric(catch[["RelYear"]])
+
+```
+
+#### Apportioning & Partitioning Sex
+
+We stratify abundance estimates by age and by sex. To include the maximum number of fish in such estimates, we apportion sex to fish without such a field-assigned label using the known sex ratio. `sportfish::ApportionSex()` calls `base::sample()`, setting parameter `prob` to the proportion of males and females. This process assigns either 'm' or 'f' to each fish without such a distinction and yields only whole counts (i.e., no fractions of fish). Because `base::sample()` results are random, it is necessary to call `base::set.seed()` (or similar) for reproducibility.
+
+`sportfish::ApportionSex()` returns the entire dataframe with the 'Sex' field adjusted accordingly. We use `catch[["Data"]]` and re-assign the results back to said field.
+
+```{r apportion-sex}
+
+# chunk apportions fish with sex = 'u' as either 'm' or 'f' based on sex ratio;
+# because catch[["Data"]] is a list, we must use lapply
+catch$Data <- lapply(catch[["Data"]], FUN = ApportionSex, sex = RelSex0)
+
+```
+
+We divide `catch[["Data"]]` by sex (using field `RelSex0`), assigning the results to `catch$BySex`. `BySex` is a list within a list (Data --> Sex --> Release Year; working inward to outward).
+
+```{r split-sex}
+
+catch$BySex <- lapply(
+  catch[["Data"]],
+  FUN = Split,
+  # below: args passed to Split
+  splitVars = RelSex0,
+  drop = FALSE
+)
+
+```
+
+#### Age-Length Key
+
+To most Striped Bass prior to 2010, an age was assigned by examining scale samples collected from each fish. From 2010 onward, scale samples were collected but to date have not been examined. (Though currently some staff are working to age the backlog.) We developed an "quasi" age-length key using available CDFW field sampling (tagging) data. We used only fish with known lengths and ages and where fork length was &ge; 30 centimeters. We did not bin length, and we did not stratify by sex. The "quasi" label denotes we did not calculate proportions (as in a more traditional age-length key). Rather we split (using `base::split()`) ages by each fork length, assigning the results to variable `qalk`. We discuss the application of `qalk` later in this report.
+
+```{r al-key}
+
+# creates a quasi age-length key for mostly aging years in which no scales have
+# been aged directly; will be used in following chunks
+qalk <- with(data = Tagging[["StripedBass"]], expr = {
+  b <- (RelFL >= 30 & !is.na(RelFL)) & !is.na(RelAge)
+  split(RelAge[b], f = RelFL[b])
+})
+
+```
+
+**Notes**
+
+(1) Most Striped Bass in our dataset are &ge; 30 centimeters. Few exist that are smaller, but some are single digits - errors with data entry or migration (from dBase to Access) that require attention. 
+
+(2) We did not stratify the age-length key by sex mostly to maximize coverage at each length. In certain years, particularly recent ones, we collected way more males than females.
+
+(3) `qalk` is a list with `r length(qalk)` elements (lengths). Use `names(qalk)` to see which lengths, and use `lapply(qalk, FUN = table)` to get age frequency for each length.
+
+#### Assign Age: Tagging Data
+
+The process we developed to assign an age to each non-aged fish is admittedly involved. We use 'Data' in `catch[["BySex"]]`. Doing so requires a nested `base::lapply()`.
+
+(1) if number of rows 'Data' = 0, return NULL
+(2) expand 'Data' on `Count` field (e.g., `lapply(Data, FUN = rep, times = Count)`)
+(3) call `sportfish::AgeEach()`, supplying sequence min length to max length (by 1) to`lenBreaks`
+(4) check for any ages NA
+(5) if any NA, call `sportish::AgeAssign()`
+    (a) requires call to `base::mapply()`, where `list(alk = qalk, setSeed = <some numeric>)` is supplied to `MoreArgs`
+    (b) note setting seed as `sportish::AgeAssign()` calls `base::sample()`
+    (c) note the use of `qalk`
+(6) using results from #5, assign age to any fish NA from step #4
+(7) check again for any ages NA
+(8) if any, and if the data allow (i.e., enough samples) predict age from loess regression (use `stats::loess()`)
+(9) using results from #8, assign age to any fish NA from step #7
+(10) any remain non-aged fish are assigned an age based on proportion of aged fish
+(11) create field `Aged` in dataframe and return the entire dataframe; output is 'Data' in `catch[["BySex"]]` with all fish aged (a message will display number NA, if any)
+
+We assign results of steps above to `catch$AgeAssign`, a nested list.
+
+```{r age-assign}
+
+# TODO: acknowledge sample() in final step
+
+# assign age to each non-aged fish
+catch$AgeAssign <- lapply(catch[["BySex"]], FUN = function(d) {
+  lapply(d[["Data"]], FUN = function(dd) {
+    
+    # desired fields for analytics
+    cols <- c(
+      "TagNum", "CapMethod", "RelFL",
+      "TagActionF", "RelAge0", "LenCat"
+    )
+    
+    # for now return NULL if no data
+    if (nrow(dd) == 0) return(NULL)
+    
+    # need to expand data on `Count` field to get complete number of fish
+    o <- data.frame(
+      lapply(dd[cols], FUN = rep, times = dd[["Count"]]),
+      stringsAsFactors = FALSE
+    )
+    
+    # find fork length range to use in length breaks for `AgeEach`; fork length
+    # can be all NA but some may have ages, so r = c(0, 0) handles this
+    r <- c(0, 0)
+    if (!all(is.na(o[["RelFL"]])))
+      r <- range(o[["RelFL"]], na.rm = TRUE)
+    lb <- seq(from = r[[1]], to = r[[2]] + 1, by = 1)
+    
+    # assign ages to each fish - need to employee `set.seed` but how
+    # set.seed(seed = 456)
+    a <- AgeEach(data = o, len = RelFL, age = RelAge0, lenBreaks = lb)
+    
+    # check for which ages are still NA post call to AgeEach()
+    b_age_na <- is.na(a[["Ages"]])
+    
+    # now check if any ages are still NA, if yes then employ AgeAssign
+    if (any(b_age_na)) {
+      
+      # create len-frequency where ages are missing (NA)
+      lf <- table(o[b_age_na, "RelFL"], useNA = "ifany")
+      
+      # if there is len-freq, then attempt to assign ages
+      if (dim(lf) != 0) {
+        
+        # used to keep order in tact with `o`
+        ord <- lapply(names(lf), FUN = function(x) {
+          which(o[b_age_na, "RelFL"] %in% as.numeric(x))
+        })
+        
+        # does not work properly without call to `order()`
+        ord <- order(unlist(ord, use.names = FALSE))
+    
+        # uses qalk to assign age to fish with length (in qalk)
+        age_assign <- mapply(
+          FUN = AgeAssign,
+          len = names(lf),
+          size = lf,
+          MoreArgs = list(alk = qalk, setSeed = 123),
+          SIMPLIFY = FALSE
+        )
+        
+        # unlist to get vector of ages
+        age_assign <- unlist(age_assign, use.names = FALSE)[ord]
+        
+        # re-assign to original age vector
+        a[["Ages"]][b_age_na] <- age_assign
+      }
+      # end dim check
+    }
+    # end anyNA check
+    
+    # now recheck with ages are still NA
+    b_age_na <- is.na(a[["Ages"]])
+    
+    nn <- nrow(o)
+    both <- sum(b_age_na | is.na(o[["RelFL"]]))
+    n_age <- length(unique(a[["Ages"]][!b_age_na]))
+    
+    # needed to get loess to compute without warning (default span = 0.75)
+    span <- 0.75
+    if (n_age < 6) span <- 0.9
+    
+    # if number of records (i.e., pairs where Age & Len are available) is
+    # greater then 10, then perform loess to continue assigning ages
+    if (any(b_age_na) && nn - both >= 10) {
+      
+      mod <- loess(formula = a[["Ages"]] ~ o[["RelFL"]], span = span)
+      # nd <- o[b_age_na, "RelFL", drop = TRUE]
+      
+      loess_ages <- predict(
+        object = mod,
+        newdata = o[b_age_na, "RelFL", drop = TRUE]
+      )
+      
+      # for now will use ceiling
+      a[["Ages"]][b_age_na] <- ceiling(loess_ages)
+    }
+    # end loess
+    
+    # check again
+    b_age_na <- is.na(a[["Ages"]])
+    
+    if (any(b_age_na)) {
+      
+      # using b will still leave some fish without an age - these fish have
+      # lengths not in any length bin with ages; but here we use b_age_na, which
+      # will assign an age to all remaining non-aged fish
+      
+      # b <- is.na(a[["Ages"]]) & (is.na(o[["RelFL"]]) | o[["RelFL"]] < 22)
+      
+      n <- sum(b_age_na)
+      # n <- sum(b)
+      
+      p <- prop.table(table(a[["Ages"]]))
+      pa <- as.numeric(names(p))
+      sa <- sample(pa, size = n, replace = TRUE, prob = p)
+      a[["Ages"]][b_age_na] <- sa
+    }
+    
+    # could check again but at this point all should be aged, issue message just FYI
+    b_age_na <- is.na(a[["Ages"]])
+    
+    if (any(b_age_na)) {
+      msg <- sprintf(fmt = "%s fish have no age.", sum(b_age_na))
+      message(msg)
+    }
+    
+    # include in dataframe for output & next steps
+    o$Aged <- a[["Ages"]]
+    o
+  })
+  # end inner lapply
+})
+# end outer lapply
+
+```
+
+### Age Composition
+
+Age composition (AgeCom for short) is simply the final age frequency by sex after non-aged and (or) non-sexed fish have been apportioned accordingly. Find examples in `.xls` files located in directory `U:\SportFish\asb\DATA\AGECOM` (example `AGECOM_<YYYY>_Tagging.xls`). Here, we provide age frequency by tagging action to easily get marked (tagged) fish and all fish.
+
+We bin age as 2-7 and &ge; 8 (or '8p' for 8 plus). We catch fewer older fish, and older fish typically are more challenging to age. Thus the reason for grouping. Two is the minimum age in our dataset, and here also, we catch very few.
+
+*Note*: for this process we do not include sub-legal sized fish. However, since 2010 we have tagged such fish, and it might be best to (1) include these fish or (2) separately estimate sub-legal abundance. Neither have been explored to date (`r Sys.Date()`).
+
+```{r age-com}
+
+# create annual age composition by sex
+catch$AgeCom <- lapply(catch[["AgeAssign"]], FUN = function(s) {
+  lapply(s, FUN = function(d) {
+    
+    # for convenience, subset d here to remove sub-legal sized fish
+    d <- subset(d, subset = !LenCat %in% "sub")
+    
+    # bin ages 2-7, 8p (>= age-8)
+    a <- cut(
+      d[["Aged"]],
+      breaks = c(2:8, Inf),
+      labels = c(2:7, "8p"),
+      include.lowest = TRUE, 
+      right = FALSE
+    )
+    
+    # return table age by tagging action
+    table(a, d[["TagActionF"]], useNA = "ifany", dnn = NULL)
+  })
+  # end inner lapply()
+})
+# end outer lapply()
+
+```

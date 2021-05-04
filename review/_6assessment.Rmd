@@ -1,0 +1,9 @@
+---
+
+---
+
+```{r setup6, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```

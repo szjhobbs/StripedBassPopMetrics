@@ -1,0 +1,244 @@
+---
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Introduction
+
+
+
+## Libraries
+
+We load the `sportfish` package, currently available on GitHub. For now (08-Apr-2019), this is the only package required.
+
+```{r load-libraries}
+
+library(sportfish)
+# library(package)
+
+```
+
+## Load Data
+
+We load `StripedBass.rds` file from directory `data/tagging`. We only need this file for analytics.
+
+```{r load-data}
+
+# the data directory for bay study
+data_dir <- "data/tagging"
+
+# Tagging <- new.env()
+# ReadRDSFiles(fileDir = data_dir, envir = Tagging)
+
+Stripers <- readRDS(file = file.path(data_dir, "StripedBass.rds"))
+
+# clean up
+rm(data_dir)
+
+```
+
+Here we create some variables we'll use throughout this process. We create them here and now for convenience.
+
+```{r variables}
+
+age_len_vars <- with(data = Stripers, expr = {
+  
+  bfl <- RelFL %in% 0:9
+  bage <- RelAge %in% 0:1
+  
+  flNA <- sum(is.na(RelFL))
+  ageNA <- sum(is.na(RelAge))
+  
+  fl_rng <- range(RelFL[!bfl], na.rm = TRUE)
+  age_rng <- range(RelAge[!bage], na.rm = TRUE)
+  
+  list(
+    FishCount = sum(Count),
+    FLRemove = sum(bfl),
+    AgeRemove = sum(bage),
+    CountFLNA = sum(flNA),
+    CountAgeNA = sum(ageNA),
+    RangeFL = fl_rng,
+    RangeAge = age_rng,
+    RangeFLtxt = paste0(fl_rng, collapse = " to "),
+    RangeAgetxt = paste0(age_rng, collapse = " to ")
+  )
+})
+
+```
+
+
+## Data Subset
+
+For convenience, we remove from our data age values as NA, 0, & 1 (not actual ages). Further, we restrict fork length to &ge; 42 cm.
+
+```{r data-subset}
+
+Stripers <- subset(
+  Stripers,
+  subset = !(RelAge %in% 0:1) &
+    !is.na(RelAge) &
+    RelFL >= 42 #&
+    # CaptureMethod == 2
+)
+
+# just FIO (uncomment as needed)
+# table(Stripers[["RelAge"]], useNA = "ifany")
+# table(Stripers[["RelFL"]], useNA = "ifany")
+
+```
+
+## Split Data (for Analyses)
+
+```{r}
+
+svars <- c("RelFL", "RelAge")
+gvars <- c("RelYear", "CaptureMethod")
+
+
+split_la <- split(Stripers[svars], f = Stripers[gvars], drop = T)
+
+
+```
+
+```{r plot-age_len, eval=FALSE}
+
+Map(function(x, nm) {
+  plot(
+    jitter(x$RelAge),
+    x$RelFL,
+    main = nm,
+    pch = 20,
+    col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2),
+    panel.first = lines(loess.smooth(x$RelAge, x$RelFL), col = 2)
+  )
+  
+  # loess.smooth(x$RelAge, x$RelFL, span = 9/10)
+  # scatter.smooth(x$RelAge, x$RelFL)
+}, split_la, names(split_la))
+
+```
+
+## Fit VBGM
+
+```{r fit-vbgm}
+
+# starting values passed to stats::nls(); chosen somewhat arbitrarily
+sv <- list(Linf = 150, K = 0.04, t0 = 2)
+
+# fit growth model; control arg needed as some years (gill net only) error on
+# step factor reduced below 'minFactor' (see help(nls.control))
+fit <- lapply(
+  split_la,
+  FUN = FitVBGM,
+  # passed to ...
+  len = RelFL,
+  age = RelAge,
+  start = sv,
+  control = list(warnOnly = TRUE) # maxiter = 100, tol = 2e-05,
+)
+
+# **********************************************************
+# for testing of fit warnings & error
+# 
+# sv2 <- list(Linf = 100, K = 0.0075, t0 = -2.5)
+# 
+# FitVBGM(
+#   data = split_la[24]$`1992.1`,
+#   len = RelFL,
+#   age = RelAge,
+#   start = sv2,
+#   control = list(warnOnly = TRUE)
+# )
+# 
+# **********************************************************
+
+```
+
+
+```{r vbgm-params}
+
+vbgm_params <- vapply(fit, FUN = function(f, alpha = 0.05) {
+  
+  s <- summary(f)
+  
+  # to get estimate & SE side-by-side
+  e <- t(coefficients(s))
+  
+  res <- setNames(
+    object = e[c("Estimate", "Std. Error"), ],
+    nm = c("Linf", "LinfSE", "K", "KSE", "t0", "t0SE")
+  )
+  
+  # for possible confidence intervals
+  # z <- qnorm(1 - alpha / 2)
+  # res <- c(res, KCL = unname(z * res["KSE"]))
+  
+  res <- c(res, StopCode = f[["convInfo"]][["stopCode"]])
+  
+}, FUN.VALUE = numeric(7L))
+
+# for plotting & other analytics
+vbgm_params <- data.frame(
+  do.call(
+    what = rbind,
+    args = strsplit(dimnames(vbgm_params)[[2]], split = "\\.")
+  ),
+  t(vbgm_params),
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+
+colnames(vbgm_params)[1:2] <- c("Year", "CapMethod")
+
+vbgm_params$Year <- as.numeric(vbgm_params[["Year"]])
+
+vbgm_params$CapMethod <- factor(
+  vbgm_params[["CapMethod"]],
+  levels = c("1", "2"),
+  labels = c(`1` = "GN", `2` = "FT")
+)
+
+```
+
+```{r}
+
+plot(K ~ Year, vbgm_params, col = vbgm_params$CapMethod)
+plot(Linf ~ Year, vbgm_params, subset = CapMethod %in% "FT")
+
+
+
+```
+
+
+
+## Save Summary
+
+We save the summary to `.csv` file for ease of use in other analytics and for viewing on GitHub.
+
+```{r save-annual_sum}
+
+# write.csv(
+#   annual_length,
+#   file = "fishery/card_sp_length.csv",
+#   row.names = FALSE
+# )
+# 
+# write.csv(
+#   card_summary,
+#   file = "fishery/card_summary.csv",
+#   row.names = FALSE,
+#   na = ""
+# )
+
+```
+
+---
+
+CDFW, SportFish Unit    
+`r Sys.Date()`

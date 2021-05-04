@@ -1,0 +1,76 @@
+
+vapply(split(Stripers[Stripers$TagAction %in% "1" | is.na(Stripers$TagAction), "RelFL"],
+             f = Stripers[Stripers$TagAction %in% "1" | is.na(Stripers$TagAction), "RelYear"]),
+       FUN = function(x) min(x, na.rm = T), FUN.VALUE = numeric(1L))
+
+
+
+
+fn <- function(x) {
+  
+  m <- mean(x, na.rm = TRUE)
+  s <- sd(x, na.rm = TRUE)
+  
+  list(
+    Mean = m,
+    SD = s,
+    CV = (s / m) * 100
+  )
+}
+
+fn(sample(x = 30:60, size = 10000, replace = TRUE))
+
+
+with(data = Stripers, expr = {
+
+  # y <- as.numeric(format(RelDate, format = "%Y"))
+
+  table(RelYear, RelAge, useNA = "ifany", dnn = c("Year", "Age"))
+
+})
+
+aggregate(
+  formula = Count ~ TagAction,
+  data = Stripers,
+  FUN = sum,
+  # subset = RelAge %in% 0:1 | is.na(RelAge)
+  # subset = RelYear > 2009,
+  subset = RelYear > 2009,
+  na.action = na.pass
+)
+
+
+table(Stripers$RelYear, sum(is.na(Stripers$RelAge)))
+
+aggregate(
+  formula = RelAge ~ RelYear,
+  data = Stripers,
+  FUN = function(x) sum(is.na(x)),
+  # subset = RelAge %in% 0:1 | is.na(RelAge)
+  # subset = RelYear > 2009,
+  subset = RelYear < 2010,
+  na.action = na.pass
+)
+
+
+
+
+plot(c(1, 10), c(11, 20), type = "n")
+
+points(rep(2, 100), runif(100, min = 11, max = 20))
+points(rep(3, 100), runif(100, min = 11, max = 20))
+
+# Wed Feb 19 15:54:23 2020 ------------------------------
+
+# https://www.r-bloggers.com/building-a-base-dplyr-with-primitives/
+
+select <- function(.data, ...) {
+  cols <- vapply(substitute(...()), deparse, NA_character_)
+  `[`(.data, , cols, drop = FALSE)
+  # cols
+}
+
+
+select(.data = iris, Species, Sepal.Width)
+select(.data = iris)
+

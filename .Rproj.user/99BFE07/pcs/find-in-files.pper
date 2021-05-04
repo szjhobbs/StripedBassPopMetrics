@@ -1,0 +1,9 @@
+{
+    "dialog-state": {
+        "caseSensitive": false,
+        "filePatterns": [],
+        "path": "~/RProjects",
+        "query": "R book",
+        "regex": false
+    }
+}

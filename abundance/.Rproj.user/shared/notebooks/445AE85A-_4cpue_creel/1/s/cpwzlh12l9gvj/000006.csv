@@ -1,0 +1,6 @@
+"0",""
+"0","xtks <- Reduce(f = `:`, x = p_ratio0[[""xrng""]])"
+"0","ytks <- Reduce(f = `:`, x = p_ratio0[[""yrng""]])"
+"0","# p_ratio0$xticks()"
+"0",""
+"0","par(mgp = c(3, 0.4, 0))"

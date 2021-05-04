@@ -1,0 +1,215 @@
+---
+title: ''
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+```{r libs-source}
+
+# library(RMark)
+library(ggplot2)
+
+# help documentation
+# http://www.phidot.org/software/mark/rmark/
+
+source("source/source_sb_mark-recap.R")
+
+```
+
+```{r load-data}
+
+StriperAll <- readRDS(file = "data/tagging/StriperAll.rds")
+
+# get only 2017 data
+dat2017 <- subset(StriperAll, subset = RelYear %in% 2017)
+
+```
+
+Table below of recaptures from 2017 Striped Bass tagging at Knights Landing.  
+Gear type: fkye traps, 8 traps fished throughout the season  
+
+Traps numbered sequentially 1-8, with 1 being the northern-most trap and 8 being the southern-most trap.
+
+```{r recaps}
+
+# recapture fish from 2017 sorted by days at large (DAL)
+recap2017 <- RecapSummary(StriperAll, year = 2017, datSort = "DAL")
+
+# display recap table
+recap2017
+
+```
+
+Matrix of recaptures by date tagged (rows) & date recaptured (columns). For example, 5 fish tagged on 04-26 were recaptured on 04-27.
+
+```{r recaps_date}
+
+# table tagged x recap with only tags from 2017 release
+with(data = recap2017[!(recap2017$TagNum %in% 292095), ], expr = {
+  tag <- format(Tagged, "%m-%d")
+  rec <- format(Recap, "%m-%d")
+  
+  # table(tag, rec, useNA = "ifany", dnn = c("Tagged", "Recap"))
+  table(tag, rec, dnn = c("Tagged", "Recap"))
+})
+
+```
+
+Matrix of count of fish by trap number (rows) & tagging action (columns; see below for description). For example, for the season 341 were tagged (tagging action 1) from trap 4.
+
+Code | TagAction
+-----|------------
+ 1   | tagged
+ 2   | recaptured
+ 5   | over (no tag, no data)
+ 6   | fish dead
+ 7   | creeled (no tag, data collected)
+
+```{r count-trap}
+
+# fished 8 traps in 2017
+
+# TagAction
+# 1 = tagged
+# 2 = recaptured
+# 5 = over (no tag, no data)
+# 6 = fish dead
+# 7 = creeled (no tag, data collected)
+
+count_trap_action <- with(data = dat2017, expr = {
+  table(Trap = DriftTrap, TagAction)
+})
+
+count_trap_action
+
+```
+
+Same as above except by date (tagging date) rather than trap number. For example, on Apr-28 164 Striped Bass were affixed with a Petersen tag (tagged), 7 Striped Bass were recaptured, and 3 Striped Bass were recorded as over.
+
+```{r count-date}
+
+with(data = dat2017[!is.na(dat2017$DriftTrap), ], expr = {
+  table(RelDate = format(RelDate, "%b-%d"), TagAction)
+})
+
+```
+
+Matrix of within-season recaptures by trap tagged (rows) & trap recaptured (columns). Only 1 Striped Bass was recaptured in the same trap it was tagged (trap 3). Fish tagged from trap 5 were recaptured in other traps, but trap 5 did not record any recaptures (sum columns, this was the only trap without a recap).
+
+```{r tag-rec}
+
+# to remove recapture from 2016 tag release (tag number 292095), all other
+# recaps from within season (i.e., within 2017)
+rm_2016_recap1 <- !(dat2017$TagNum %in% 292095)
+rm_2016_recap2 <- !(recap2017$TagNum %in% 292095)
+
+# no fish recaptured in trap 5 (for 2017 farthest downstream of the upstream [of
+# highway 113 bridge] traps)
+# table(dat2017$DriftTrap[dat2017$TagAction %in% 2 & rm_2016_recap1])
+
+# fish (295892) found dead in recaptured trap; was released 09-May-2017 trap 2 
+# but removed from tagging dataset, assigning release trap as 2 for purpose of
+# seeing origin (trap) of released fish
+recap2017$TrapTag[is.na(recap2017$TrapTag)] <- 2
+
+# factoring to ensure all traps 1-8; trap 5 had no recaps
+trap_tag <- factor(recap2017$TrapTag[rm_2016_recap2], levels = 1:8)
+trap_rec <- factor(recap2017$TrapRec[rm_2016_recap2], levels = 1:8)
+
+# count by trap tagged & trap recaptured
+tag_rec_trap <- table(trap_tag, trap_rec, dnn = c("Tagged", "Recap"))
+
+# count tags per trap
+tag_trap <- table(dat2017$DriftTrap[dat2017$TagAction %in% 1])
+
+# display trap tagged x trap recaptured matrix
+tag_rec_trap
+
+```
+
+Recapture 'rate' - though it's more of a proportion. Matrix above divided (row-wise) by the number of tags per trap.
+
+Tags per trap (in order 1-8): `r tag_trap`
+
+```{r recap-rate}
+
+# recapture rate
+rr <- sweep(tag_rec_trap, MARGIN = 1, STATS = tag_trap, FUN = "/")
+print(rr, digits = 3)
+
+```
+
+Visual display of matrix above. Of the Striped Bass collected and then tagged from trap 4 (n=341) some were recaptured in traps 1, 2, 3, & 7. Eight, or ~2.3% (`8/341`), were recaptured in trap 3.
+
+```{r rr-viz}
+
+# for ggplot
+dat_rr <- as.data.frame(rr)
+
+ggplot(data = dat_rr, mapping = aes(x = Tagged, y = Recap)) +
+  geom_tile(mapping = aes(fill = Freq)) +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(
+    x = "Trap number (tagged)",
+    y = "Trap number (recap)",
+    fill = "Rate"
+  )
+
+# tinkering with other plots but not run
+# ggplot(data = dat_rr, mapping = aes(x = Recap, y = Freq)) +
+#   geom_col() +
+#   # geom_point() +
+#   # geom_jitter(mapping = aes(colour = Recap)) +
+#   scale_x_discrete(limits = rev(levels(dat_rr$Recap)))
+# 
+# ggplot(data = dat_rr, mapping = aes(x = Tagged, y = Freq)) +
+#   geom_boxplot()
+
+```
+
+Display of fraction (by tagging action) of total Striped Bass caught per trap. Trap 5 caught 673 Striped Bass on the season. Of those 560 (~83%) were affixed with a Petersen tag (see 'Tagged').
+
+```{r prop-viz}
+
+# displays proportion of total caught (by trap) for the tagging actions
+# (TagAction) described below
+
+lblr <- labeller(
+  TagAction = c(
+    '1' = "Tagged",
+    '2' = "Recap",
+    '5' = "Over",
+    '6' = "Dead",
+    '7' = "Creeled"
+  )
+)
+
+prop_trap_action <- as.data.frame(prop.table(count_trap_action, margin = 1))
+
+ggplot(
+  data = prop_trap_action,
+  mapping = aes(x = Trap, y = Freq, group = TagAction)
+) +
+  geom_line(linetype = 2, colour = "grey60") +
+  geom_point(colour = "white", fill = "steelblue", shape = 21, size = 3) +
+  facet_wrap(
+    facets = ~TagAction,
+    scales = "free_y",
+    ncol = 2,
+    labeller = lblr
+  ) +
+  labs(x = "Trap number", y = "Fraction of total")
+
+```
+
+----
+end of report  
+ran: `r Sys.time()`  
+CDFW (2017)

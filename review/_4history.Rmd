@@ -1,0 +1,41 @@
+---
+
+---
+
+<!-- 12-Feb-2020 @ 0954 -->
+
+<!-- MORE Program Element Historical Details -->
+
+<!-- Andrew's writing below - decided for now to keep it all together for flow & readability -->
+
+```{r setup4, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+```
+
+## Project History
+
+Prior to 1950, only the general seasonal nature of California Striped bass migration were known [Orsi -@orsi-1971]. A steady decrease in sport fishing success for Striped bass in the late 1940s and early 1950s caused concern over the population’s status [Chadwick -@chadwick-1968]. Primarily funded by the new Dingell-Johnson Act of 1950, a series of three different studies between 1950 and 1966 were conducted to assess Striped Bass migration and harvest in the Sacramento-San Joaquin Delta. These studies would be labeled and funded as California project F-9-R, “A Study of Sturgeon and Striped Bass,” which was supported by Federal Aid to Fish Restoration Funds. 
+
+The first of these was an adult tagging study that was the first of its kind for California Striped Bass [Calhoun -@calhoun-1952]. Prior to Calhoun’s -@calhoun-1952 study, tagging of California Striped Bass was limited to mostly small fish that were under 12 inches in length. Adult Striped Bass 11-40+ inches were caught and tagged in the spring of 1950-1951 via gill net in an area that spanned from Chipps Island to Franc’s Tract in the Sacramento-San Joaquin Delta. Migration and abundance were estimated using disc tag returns received via mail from anglers. The results of Calhoun’s adult tagging study demonstrated Striped Bass had anadromous migration patterns in the Sacramento-San Joaquin Delta and few tagged fish were caught in San Francisco Bay or Pacific Ocean [Orsi -@orsi-1971]. With the help of Howard McCully from the Bureau of Marine Fisheries, this was also the first time commendation cards were sent out to anglers who returned a captured disc tag. The completion and mailing of commendation cards for tag returns is a practice that is still conducted by CDFW R3 to the time of this writing (2020). 
+
+Calhoun’s -@calhoun-1952 study did not produce satisfactory mortality estimates due most part to loss of tagged fish to commercial shad and salmon gill nets. These commercial fisheries were closed in 1957 and presented an opportunity for further adult Striped Bass research [Chadwick -@chadwick-1968]. As part of a program to evaluate changes in the Striped Bass population and regulations, a 4-year tagging study was performed through years 1958-1961 to measure mortality rates and migration shifts of Striped Bass in the delta. Fish were primarily caught and tagged using gill nets around the confluence of the Sacramento and San-Joaquin rivers like in Calhoun’s experiment. Fish were also caught and tagged via fyke trap at Fremont Weir in the upper Sacramento in May 1958, as well as by angling in San Pablo Bay in the fall of 1958-1959. Results from this study indicated that more bass were entering SF Bay and the Pacific Ocean than in the early 1950s. This study also demonstrated that tag returns gave reasonably valid estimates for mortality and probably underestimated Striped Bass exploitation.  
+
+In 1965 the tagging program was renewed to evaluate changes in the population parameters of Striped Bass in the Sacramento-San Joaquin delta. [Miller -@miller-1974]. Fish were tagged in 1965-66 using similar methods to the previous studies. This study determined that a recent decline in angler success and angler effort related to a declining population. This study also demonstrated that survival rates increased, and exploitation rates declined in response to reduced angling pressure. 
+
+Building upon these prior studies, CDFW (then CDFG) started their long-term mark-recapture study on legal sized Striped Bass age-3 and above in 1969 [Smith -@smith-1978]. Fish tagged from 1969-2009 were captured and tagged primarily by gill net but were also tagged via fyke traps. Gill net operations formally ceased after the 2009 season due to availability and absence of experienced personnel. 
+
+Fyke traps have been fished continually since 1969, with a few years of non-sampling due to environmental and seasonal personnel issues. Fyke traps were not fished in 1959-61 and 1965-66 during the initial first 3 Striped Bass studies [White -@white-1986]. Fyke trapping sites have included Isleton, Courtland, Clarksberg, Colusa, Fremont Weir, Knights Landing, and other special areas since the early 1960s. The primary fyke location for tagging adult Striped Bass has been in Knights Landings since 1990 [CDFW R3 Sportfish data; Kohlhorst and Vu -@kohlhorst-vu-2003].  
+
+A summer-fall creel census targeting Striped Bass anglers started in 1969 too. The first iteration of the Striped Bass creel survey aimed to increase angler tag returns from the San Francisco-San Pablo Bay area. CPFV logs and sampling had intermittently been used for Striped Bass sport fishery analysis, but formally started in 1969 as well. In 1977-78 creel census of private boats was not sampled and charter boat sampling was reduced 75-80%. Tagging effort was reduced from two gill nets and fyke trap to one gill net boat for 1977-78. In 1988 the Striped Bass creel survey added a ‘river’ creeling extension to further assess angling effort and increase tag returns in the Sacramento-San Joaquin Estuary. The Striped Bass creel census project in entirety was cancelled in 2009 due budgetary restrictions after the 2008 economic downturn in the US (CDFW-Jason DuBois).
+
+## Fishing Regulation Changes
+
+**1944-1954**: daily bag limit 5 fish; minimum total length 12 inches. [Chadwick -@chadwick-1962] 
+
+**1955**: daily bag limit 4 fish; minimum total length 12 inches. [Chadwick -@chadwick-1969] 
+
+**1956-1982**: daily bag limit 3 fish; minimum total length 16 inches [Chadwick -@chadwick-1962; Stevens et al. -@stevens-1985] 
+
+**1982-present**: daily bag limit 2 fish; minimum total length 18 inches [Stevens et al. -@stevens-1985] 

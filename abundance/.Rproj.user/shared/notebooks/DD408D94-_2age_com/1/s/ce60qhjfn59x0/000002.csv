@@ -1,0 +1,4 @@
+"0",""
+"0","set.seed(456)"
+"0","creel$Data <- lapply(creel[[""Data""]], FUN = ApportionSex, sex = Sex)"
+"0",""

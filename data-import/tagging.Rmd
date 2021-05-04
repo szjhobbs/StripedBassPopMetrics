@@ -1,0 +1,502 @@
+---
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = "~/RProjects/StripedBassPopMetrics/")
+
+# sets all sql chunks to same database connection
+knitr::opts_chunk$set(connection = "con")
+
+```
+
+```{r libraries}
+
+library(sportfish)
+
+# source local for scrambling
+source(file = "data-import/.functions_id_scramble.R")
+
+```
+
+```{r db-connect}
+
+# drvr <- ""
+srvr <- "sqlprod2.ad.dfg.ca.gov"
+dbn <- "BDASB"
+
+con <- DBI::dbConnect(
+  odbc::odbc(), 
+  Driver = "SQL Server", 
+  Server = srvr, 
+  Database = dbn, 
+  Trusted_Connection = "True"
+)
+
+```
+
+<!-- begin SQL queries -->
+
+```{sql tagged, output.var="Tagged", eval=FALSE}
+
+SELECT tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS RelLoc
+  , tm.REL_METHOD AS CapMethod
+  --, tm.REL_TEMP AS WaterTemp
+  , td.TAG_NUM AS TagNum
+  , td.REL_FLEN AS RelFL
+  , td.REL_SEX AS RelSex
+  , td.REL_VALUE AS TagValue
+  , td.REL_COND AS RelCond
+  , td.REL_DRIFT_TRAP AS DriftTrap
+  , td.REL_SCALE_AGE AS RelAge
+  , tm.REL_ID AS RelID
+FROM dbo.TAG_MAIN AS tm INNER JOIN dbo.TAG_DETAIL AS td
+  ON tm.REL_ID = td.REL_ID
+WHERE td.REL_TAGGING_ACTION IS NULL OR td.REL_TAGGING_ACTION = 1;
+
+```
+
+```{sql sb-all, output.var="StripedBass"}
+
+WITH SBAll_CTE
+AS
+(
+ SELECT tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS RelLoc
+  , tm.REL_METHOD AS CapMethod
+  , td.TAG_NUM AS TagNum
+  , td.REL_FLEN AS RelFL
+  , td.REL_SEX AS RelSex
+  , td.REL_VALUE AS TagValue
+  , td.REL_COND AS RelCond
+  , td.REL_DRIFT_TRAP AS DriftTrap
+  , td.REL_TAGGING_ACTION AS TagAction
+  , 1 AS [Count]
+  , td.REL_SCALE_AGE AS RelAge
+  , tm.REL_ID AS RelID
+ FROM dbo.TAG_MAIN AS tm INNER JOIN dbo.TAG_DETAIL AS td
+   ON tm.REL_ID = td.REL_ID
+
+ UNION ALL
+ 
+ SELECT tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS RelLoc
+  , tm.REL_METHOD AS CapMethod
+  , '' AS TagNum
+  , nd.REL_FLEN AS RelFL
+  , nd.REL_SEX AS RelSex
+  , '' AS TagValue
+  , nd.REL_COND AS RelCond
+  , nd.REL_DRIFT_TRAP AS DriftTrap
+  , nd.REL_TAGGING_ACTION AS TagAction
+  , nd.REL_COUNT AS [Count]
+  , nd.REL_SCALE_AGE AS RelAge
+  , tm.REL_ID AS RelID
+ FROM dbo.TAG_MAIN AS tm INNER JOIN dbo.NON_TAG_DETAIL AS nd
+   ON tm.REL_ID = nd.REL_ID
+)
+SELECT YEAR(SBall_CTE.RelDate) AS RelYear
+  , SBAll_CTE.*
+FROM SBAll_CTE;
+
+```
+
+```{sql effort, output.var="Effort"}
+
+SELECT YEAR(ef.REL_DATE) AS RelYear
+  , ef.REL_DATE AS RelDate
+  , ef.REL_DRIFT_TRAP AS DriftTrap
+  , ef.START_TIME AS StartTime
+  , ef.END_TIME AS EndTime
+  , ef.CaptureMethod AS CapMethod
+FROM dbo.TAG_DRIFT_TRAP AS ef
+ORDER BY ef.REL_DATE, ef.REL_DRIFT_TRAP;
+
+```
+
+```{sql tag-returns, output.var="TagReturns"}
+
+SELECT YEAR(tm.REL_DATE) AS RelYear
+  , tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS RelLoc
+  , tm.REL_METHOD AS CapMethod
+  , td.TAG_NUM AS TagNum
+  , td.REL_VALUE AS RelVal
+  , td.REL_FLEN AS RelFL
+  , td.REL_SCALE_AGE AS RelAge
+  -- below are possible release fields
+  , td.REL_SEX AS RelSex
+  -- , td.REL_COND AS Condition
+  -- , td.REL_DRIFT_TRAP AS DriftTrap
+  -- , td.REL_TAGGING_ACTION AS TagAction
+  -- , td.REL_COUNT AS [Count]  
+  -- below is angler recap info
+  , td.REC_RTNMOD AS RetMode
+  , td.REC_DTSTAT AS IsPostMark
+  , td.REC_DATE AS RecDate
+  , td.REC_NOTIFICATION_DATE AS RecNotifDate
+  , td.REC_LOC AS RecLoc 
+  , td.REC_METHOD AS RecMethod
+  , td.REC_FL_METRIC AS IsMetric
+  , td.REC_FORKLENGTH AS RecFLIn
+  , td.REC_ANGLER AS AnglerID
+  , td.REC_DISPOSITION AS Fate
+FROM dbo.TAG_MAIN AS tm INNER JOIN dbo.TAG_DETAIL AS td
+  ON tm.REL_ID = td.REL_ID
+WHERE td.REC_RTNMOD IS NOT NULL OR
+  (td.REC_RTNMOD IS NULL AND td.REC_ANGLER IS NOT NULL)
+ORDER BY tm.REL_DATE;
+
+```
+
+<!-- added FishName 18-Feb-2020 for use of common name rather than code -->
+
+```{sql by-catch, output.var="ByCatch"}
+
+SELECT YEAR(tm.REL_DATE) AS RelYear
+  , tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS [Location]
+  , tm.REL_METHOD AS Method
+  , tc.REL_DRIFT_TRAP AS DriftTrap
+  , tc.FISH_TYPE AS FishType
+  , sp.SpeciesName AS FishName
+  , tc.FISH_COUNT AS [Count]
+  , tc.FORK_LENGTH AS FL
+  , tc.FISH_CONDITION AS Condition
+  , tc.COLORATION AS Coloration
+  , tc.ADIPOSE_FIN_PRESENT AS HasAdFin
+FROM dbo.TAG_MAIN AS tm INNER JOIN (dbo.TAG_MISC AS tc 
+    INNER JOIN dbo.Lkp_Species AS sp ON tc.FISH_TYPE =
+	  sp.SpeciesCode)
+  ON tm.REL_ID = tc.REL_ID
+ORDER BY tm.REL_DATE
+
+```
+
+```{sql tag-action, output.var="LkpTagAction"}
+
+SELECT ta.TaggingActionCode AS Code
+  , ta.[Action] AS [Description]
+FROM dbo.lkp_TaggingAction AS ta;
+
+```
+
+```{sql rec-loc, output.var="LkpRecLoc"}
+
+SELECT al.RecoveryAnglingLocationCode AS Code
+  , al.RecoveryAnglingLocationName AS LocationName
+FROM dbo.lkp_RecoveryAnglingLocation AS al;
+
+```
+
+```{sql rel-loc, output.var="LkpRelLoc"}
+
+SELECT rl.ReleaseLocationCode AS Code
+  , rl.ReleaseLocationName AS LocationName
+FROM dbo.lkp_ReleaseLocation AS rl;
+
+```
+
+```{sql water-temp, output.var="Environmentals"}
+
+SELECT tm.REL_DATE AS RelDate
+  , tm.REL_LOC AS [Location]
+  , tm.REL_METHOD AS CapMethod
+  , tm.REL_TEMP AS WaterTemp
+  , tm.REL_ID AS RelID
+FROM dbo.TAG_MAIN AS tm
+WHERE tm.REL_TEMP IS NOT NULL;
+
+```
+
+```{sql species-lkp, output.var="LkpSpecies"}
+
+SELECT ls.SpeciesCode
+  , ls.SpeciesName
+FROM dbo.Lkp_Species AS ls
+WHERE ls.Type = 'B';
+
+```
+
+below queries added 30-Jan-2020 to include creel census data
+
+```{sql creel-census, output.var="CreelCensus"}
+
+SELECT YEAR(cm.C_DATE) AS [Year]
+  , cm.C_DATE AS [Date]
+  , cm.C_PORT AS [Port]
+  , cm.C_DAYCODE AS DayCode
+  , cm.C_START_TIME AS TimeStart
+  , cm.C_END_TIME AS TimeEnd
+  --, cm.COMMENTS AS Comments
+  --, cm.DE_DATE AS DataEntryDate
+  , cd.C_BOATCODE AS BoatCode
+  --, cd.C_CPFB AS CPFV
+  , cd.C_RECAPLOC AS RecapLoc
+  , cd.C_SPECIES AS Species
+  , cd.C_ANGLERS AS Anglers
+  , cd.C_HOURS AS [Hours]
+  , cd.C_METHOD AS Method
+  , cd.C_CATCH AS [Catch]
+  , cd.C_TAGS AS Tags
+  , cd.C_TRIP AS Trip
+  , cd.CREEL_DETAIL_ID AS DetailID
+  , cd.CREEL_MAIN_ID AS MainID
+FROM dbo.CREEL_MAIN AS cm LEFT JOIN dbo.CREEL_DETAIL AS cd
+  ON cm.CREEL_MAIN_ID = cd.CREEL_MAIN_ID
+ORDER BY YEAR(cm.C_DATE), cm.C_DATE;
+
+```
+
+```{sql cc-len-sex, output.var="CCLenSex"}
+
+-- lengths & sex only
+SELECT cl.C_LEN AS LenCM
+  , cl.C_SEX AS Sex
+  , cl.TAG_NUMBER AS TagNum
+  --, cl.REMARKS AS Comments
+  , cl.CREEL_DETAIL_ID AS DetailID
+  , cl.CREEL_MAIN_ID AS MainID
+FROM dbo.CREEL_LENGTHS AS cl;
+
+```
+
+```{sql cc-age, output.var="CCAge"}
+
+-- ages ?; 6 records have no SCALE_DATE
+SELECT cs.SCALE_DATE AS [Date]
+  , cs.SCALE_RECAPLOC AS RecapLoc
+  , cs.SCALE_REC_METHOD AS Method
+  , cs.SCALE_PORT AS [Port]
+  , cs.TAG_NUM AS TagNUM
+  , cs.SCALE_FLEN AS ForkLen
+  , cs.SCALE_SEX AS Sex
+  , cs.SCALE_AGE AS Age 
+  --, cs.SCALE_REMARKS AS Comments
+  , cs.SCALE_MAIN_ID AS ScaleMainID
+FROM dbo.CREEL_SCALES AS cs
+WHERE cs.SCALE_DATE IS NOT NULL
+ORDER BY cs.SCALE_DATE;
+
+```
+
+below added query to get at count & money paid per year for reward tag returns
+13-Feb-2020
+
+```{sql payment, output.var="RewardPayment"}
+
+SELECT YEAR(td.REC_DE) AS ProcYear
+  , td.REL_VALUE AS Reward
+  , COUNT(*) AS NumProc
+  , SUM(CAST(td.REL_VALUE AS int)) AS Payment
+FROM dbo.TAG_DETAIL AS td
+WHERE td.REC_DE IS NOT NULL AND td.REL_VALUE NOT IN ('NR', 'NM')
+GROUP BY YEAR(td.REC_DE), td.REL_VALUE
+ORDER BY YEAR(td.REC_DE), CAST(td.REL_VALUE AS int);
+
+```
+
+<!-- end SQL queries -->
+
+```{r close-con}
+
+# close database connection
+odbc::dbDisconnect(conn = con)
+rm(con)
+
+```
+
+## Data Cleanup
+
+#### Catch
+
+Values of `0` and `1` are not real ages, and here to avoid confusion we set to NA all `0`s and `1`s. 
+
+```{r rel-age}
+
+StripedBass$RelAge[StripedBass[["RelAge"]] %in% 0:1] <- NA
+TagReturns$RelAge[TagReturns[["RelAge"]] %in% 0:1] <- NA
+
+```
+
+Fork length values 0-9 are incorrect and likely are carry-overs from database conversion around 2011. In the future, we'll correct these errors in the database, but for now we'll "flag" as such the records in question.
+
+```{r fork-len_flag}
+
+# all striped bass from tagging
+StripedBass$RelFLFlag <- vector(length = nrow(StripedBass))
+StripedBass$RelFLFlag[StripedBass[["RelFL"]] %in% 0:9] <- TRUE
+
+# all striped bass from tag returns
+TagReturns$RelFLFlag <- vector(length = nrow(TagReturns))
+TagReturns$RelFLFlag[TagReturns[["RelFL"]] %in% 0:9] <- TRUE
+
+```
+
+#### Tag Returns
+
+Here we use --- when available --- date tag received (or postmarked) in absence of angler-reported recapture date.
+
+```{r rec-date}
+
+# here we wish to use date tag received (or when CDFW was notified, thus
+# RecNotifDate or recapture notification date) when date capture is not
+# available
+bool_dates <- with(data = TagReturns, expr = {
+  dc <- is.na(RecDate)
+  dr <- is.na(RecNotifDate)
+  # print(sum(dc & dr))
+  dc & !dr
+})
+
+TagReturns$RetDate <- TagReturns[["RecDate"]]
+
+TagReturns$RetDate[bool_dates] <- TagReturns[["RecNotifDate"]][bool_dates]
+
+# A = B + C (at least it should)
+sum(is.na(TagReturns[["RecDate"]])) # A
+sum(is.na(TagReturns[["RetDate"]])) # B
+sum(bool_dates)                     # C
+# table(TagReturns[["IsPostMark"]])
+
+attr(TagReturns$RetDate, which = "metadata") <- sprintf(
+  "%d dates using date tag received.", sum(bool_dates)
+)
+
+```
+
+Here we categorize tag returns based on year (from tagging) of return.
+
+```{r tag-ret-year}
+
+# for tag return year
+tag_ret_year <- TagRetYear(
+  data = TagReturns,
+  dcap = RetDate,
+  drel = RelDate
+)
+
+TagReturns$RetYear <- tag_ret_year[["RetYear"]]
+TagReturns$FlaggedRetDate <- tag_ret_year[["FlaggedRecs"]]
+
+# no need for these fields anymore
+TagReturns$IsPostMark <- NULL
+TagReturns$RecDate <- NULL
+TagReturns$RecNotifDate <- NULL
+
+# clean up
+rm(tag_ret_year, bool_dates)
+
+```
+
+Some anglers reported length in metric units (centimeters). Here we convert centimeters to inches for consistency.
+
+```{r convert-inches}
+
+TagReturns <- within(data = TagReturns, expr = {
+  RecFLIn[IsMetric] <- RecFLIn[IsMetric] / 2.54
+})
+
+TagReturns$RecFLMetricConvert <- TagReturns[["IsMetric"]]
+
+# field not needed
+TagReturns$IsMetric <- NULL
+
+```
+
+General setting NA values to "U" for unknown.
+
+```{r unknowns}
+
+TagReturns <- within(data = TagReturns, expr = {
+  # set NAs to U (for unknown)
+  RecMethod[is.na(RecMethod)] <- "U"
+  RetMode[is.na(RetMode)] <- "U"
+  Fate[is.na(Fate)] <- "U"
+})
+
+```
+
+Angler ID scramle for security purposes
+
+```{r angler-id}
+
+TagReturns$AnglerID <- ScrambleId(id = TagReturns[["AnglerID"]])
+
+```
+
+#### Effort
+
+`Method` field should really hold values of either 1 (gill net) or 2 (fyke trap) for consistency. This was an oversight when creating table for effort data in revised database (circa 2011).
+
+```{r effort-method}
+
+Effort$CapMethod[Effort[["CapMethod"]] %in% "Fyke Trap"] <- "2"
+Effort$CapMethod[Effort[["CapMethod"]] %in% "Gill Net"] <- "1"
+
+# consistency with other dataframes
+Effort$CapMethod <- as.integer(Effort[["CapMethod"]])
+
+```
+
+#### Creel Census
+
+add clean up here as needed (30-Jan-2020)
+
+```{r scramble-cpfv-code, warning=FALSE}
+
+# for security purposes scramble party boat code
+
+CreelCensus$BoatCode <- ScrambleId(id = CreelCensus[["BoatCode"]])
+
+# table(CreelCensus$CPFV, useNA = "ifany")
+
+```
+
+## Save Data
+
+Save to `.rds` for ease of use in analytics.
+
+```{r save-data}
+
+# save to this directory
+dr <- "data/tagging"
+
+# save larger datafiles to .rds
+saveRDS(object = TagReturns, file = file.path(dr, "TagReturns.rds"))
+saveRDS(object = StripedBass, file = file.path(dr, "StripedBass.rds"))
+saveRDS(object = Environmentals, file = file.path(dr, "Environmentals.rds"))
+saveRDS(object = Effort, file = file.path(dr, "Effort.rds"))
+saveRDS(object = ByCatch, file = file.path(dr, "ByCatch.rds"))
+
+# added 30-Jan-2020 to save creel census data
+saveRDS(object = CreelCensus, file = file.path(dr, "CreelCensus.rds"))
+saveRDS(object = CCLenSex, file = file.path(dr, "CCLenSex.rds"))
+saveRDS(object = CCAge, file = file.path(dr, "CCAge.rds"))
+
+# added 13-Feb-2020
+saveRDS(object = RewardPayment, file = file.path(dr, "RewardPayment.rds"))
+
+# write to .csv for ease of viewing on GitHub
+write.csv(LkpRecLoc, file = file.path(dr, "LkpRecLoc.csv"), row.names = FALSE)
+write.csv(LkpRelLoc, file = file.path(dr, "LkpRelLoc.csv"), row.names = FALSE)
+write.csv(LkpSpecies, file = file.path(dr, "LkpSpecies.csv"), row.names = FALSE)
+write.csv(
+  LkpTagAction,
+  file = file.path(dr, "LkpTagAction.csv"),
+  row.names = FALSE
+)
+
+```
+
+```{r log-extract}
+
+write(
+  sprintf("data extracted & cleaned: %s \nfrom %s", Sys.time(), dbn),
+  file = file.path(dr, "data-log"),
+  append = FALSE
+)
+
+```

@@ -1,0 +1,13 @@
+{
+    "dialog-state": {
+        "query": "loess",
+        "path": "~/RProjects/StripedBassPopMetrics/abundance",
+        "regex": false,
+        "caseSensitive": false,
+        "filePatterns": [],
+        "excludeFilePatterns": [],
+        "resultsCount": 14,
+        "errorCount": 0,
+        "replaceErrors": ""
+    }
+}

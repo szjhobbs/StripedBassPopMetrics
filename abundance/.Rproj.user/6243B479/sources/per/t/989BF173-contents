@@ -1,0 +1,226 @@
+---
+
+---
+
+### Abundance: Fyke Traps
+
+Since 2010, sampling has been significantly curtailed. We dropped gill netting (except for one day in 2011), dropped the Creel Census, and developed a backlog of un-aged scales due to limited personnel. In 2014, there was no sampling of any kind. Further, fyke trap sampling rarely has spanned the entirety of Apr-May, the historic period. Below, we state reasons why estimates in the previous section lack rigor, and then provide estimates (with notes) from 2010-2013, 2015-2019 using only fyke trap data.
+
+(1) by original design, Bay Creel data provided the initial estimate
+(2) annual updates (4 total) followed using River Creel, Tagging, and then Bay Creel datasets
+(3) gill netting & creel census data not only augmented *C* and *R* data (gill netting *M* as well) but these gear types provided samples from a broader demographic range (i.e., possibly larger [older] fish with perhaps a more balanced sex ratio)
+(4) creel census provided year-round sampling with a larger (than traps or nets) geographic footprint
+(5) ages (from scale sample analysis) provided stratification (ages 3-8 plus) and --- by original design --- a means to included or not include age-3 fish given update type (river, tag, bay), update number (1, 2, 3, or 4), and sex (male or female).
+(6) given limited annual sampling within only a small reach of the spawning grounds, it is likely data from the previous decade depict more about the (spawning) run strength and less about absolute system-wide abundance
+
+#### Fyke Trap *M* | *C* | *r*
+
+Here we estimate abundance 2010-2013, 2015-2019 using only fyke data, irrespective of age and sex. Further recaptures (*r*) consider only previous seasons and not recaptures based on the release-year estimate (thus lowercase *r* and not *R*). To our `catch` dataframe, we assigned variable `FykeMCR` to contain such data. For ease of display, we created variable `FykeEstCI` to house confidence limits, \hatN, and *r*.
+
+```{r fyke-trap-mcr}
+
+catch$FykeMCR <- Map(f = function(y, ry) {
+
+  # to loop through list (by sex: m & f)
+  o <- vapply(y, FUN = function(s) {
+    
+    # because we only want fyke trap data
+    s <- subset(s, subset = CapMethod %in% 2)
+    
+    # because we only want previous year's recaptures (i.e., not within season)
+    tr <- subset(tag_release, subset = RelYear < ry)
+    
+    # to get only recaptured fish
+    b <- s[["TagActionF"]] %in% "R2"
+    
+    # match by tag number to get recaptured fish
+    g <- s[b, "TagNum"] %in% tr[["TagNum"]]
+    
+    # will get counts used for MM & CC
+    r <- table(s[["TagActionF"]])
+    
+    # to limit on only legal sized fish
+    i <- which(names(r) %in% c("Ms", "S"))
+    
+    # output as marked, caught, & recaptured
+    c(MM = r[["Ml"]], CC = sum(r[-i]), RR = sum(g))
+  }, FUN.VALUE = numeric(3L))
+  
+  # because output is by sex, but we want total
+  rowSums(o)
+  
+}, y = catch[["AgeAssign"]], ry = catch[["RelYear"]])
+# end Map
+
+```
+
+```{r fyke-est-ci}
+
+# produces matrix of lower (L) & upper (U) bounds for fykes by release year;
+# will plot in next step
+
+catch$FykeEstCI <- t(vapply(catch[["FykeMCR"]], FUN = function(e) {
+  a <- PetersenEst(e[["MM"]], CC = e[["CC"]], RR = e[["RR"]])
+  c(L = a[["N"]] - a[["CI"]], U = a[["N"]] + a[["CI"]], N = a[["N"]], RR = e[["RR"]])
+}, FUN.VALUE = numeric(4L)))
+
+```
+
+For convenience, we display annual number marked (*M*; aka tagged), caught (*C*), and recaptured (*r*). We did not tag Striped Bass in 2014.
+
+*Notes*:
+(1) paltry number of fish caught and (or) tagged in 2015
+(2) annually recaptures (*r*) are highly variable
+(3) large differences between tagged and caught due to many fish per day given ability to process (tag) quickly; on those days we "creeled" fish (i.e., measured & sexed but not tagged)
+
+```{r plog-mark-caught}
+
+p_mmcc <- Plot(
+  x = catch[["RelYear"]],
+  y = t(vapply(catch[["FykeMCR"]], FUN = function(d) {
+    c(d[["MM"]], d[["CC"]])
+  }, FUN.VALUE = numeric(2L))),
+  subset = catch[["RelYear"]] >= 2010,
+  y0 = TRUE
+)
+
+p_mmcc$grid(xRng = TRUE)
+
+# just for convenience of plotting segments below
+ydat <- matrix(p_mmcc$data()[["y"]], ncol = 2)
+
+colmm <- adjustcolor(col = "grey20", alpha.f = 0.5)
+colcc <- adjustcolor(col = "darkred", alpha.f = 0.5)
+
+points(
+  x = p_mmcc$data()[["x"]] - 0.1,
+  y = ydat[, 1],
+  type = "h",
+  lwd = 11,
+  lend = 1,
+  col = colmm
+)
+
+points(
+  x = p_mmcc$data()[["x"]] + 0.1, 
+  y = ydat[, 2],
+  type = "h",
+  lwd = 11,
+  lend = 1,
+  col = colcc
+)
+
+# to display recaps on upper x-axis
+mtext(
+  text = paste0(vapply(catch[["FykeMCR"]], FUN = function(d) {
+    d[["RR"]]
+  }, FUN.VALUE = numeric(1L))[eval(p_mmcc[["subetted"]])], "r"), 
+  side = 3, 
+  line = 0, 
+  at = p_mmcc$data()[["x"]],
+  cex = 0.75,
+  col = "grey30"
+)
+
+# to add legend for MM|CC distinction
+legend(
+  x = p_mmcc[["xrng"]][[2]],
+  y = p_mmcc[["yrng"]][[2]],
+  legend = c("M", "C"),
+  fill = c(colmm, colcc),
+  border = NA,
+  cex = 1,
+  ncol = 2,
+  xjust = 1,
+  yjust = -0.5,
+  bty = "n",
+  xpd = TRUE
+)
+
+# for tick labels & axis labels
+Axis(p_mmcc, side = 1, labelAdj = 0.2, interval = 2)
+yaxis <- Axis(p_mmcc, side = 2, labelAdj = 0.4, format = TRUE)
+
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = yaxis$AxisTitle(var = "Count"), side = 2, line = 1.2)
+
+# clean up
+rm(ydat, yaxis, colmm, colcc)
+
+```
+
+#### Fyke Trap Abundance
+
+Here we display abundance 95% confidence intervals from 2010-2013, 2015-2019 using only fyke trap data. The top x-axis displays the number fish tagged in previous seasons recaptured in the year on the bottom x-axis.
+
+*notes*:
+(1) most confidence intervals are broad (extremely so for 2017)
+(2) it is highly unlikely the population crashed in 2015; rather this likely demonstrates few fish spawned that year
+(3) utilizing within season recaptures might improve confidence intervals (but we have not explored this option yet)
+
+```{r plot-fyke-abund}
+
+p_fyke <- Plot(
+  x = catch[["RelYear"]],
+  y = catch[["FykeEstCI"]], 
+  subset = catch[["RelYear"]] >= 2010
+)
+
+# to adjust y-axis grid line & ticks
+par(yaxp = c(range(p_fyke$yticks()) + c(0, 750000), 9))
+
+# to set plot grid
+p_fyke$grid(xRng = TRUE)
+
+# just for convenience of plotting segments below
+ydat <- matrix(p_fyke$data()[["y"]], ncol = 4)
+
+segments(
+  x0 = p_fyke$data()[["x"]],
+  y0 = ydat[, 1],
+  y1 = ydat[, 2],
+  lwd = 20,
+  lend = 1,
+  col = grey(level = 0.2, alpha = 0.5)
+)
+
+# to display recaps on upper x-axis
+mtext(
+  text = paste0(ydat[, 4], "r"), 
+  side = 3, 
+  line = 0, 
+  at = p_fyke$data()[["x"]],
+  cex = 0.75,
+  col = "grey30"
+)
+
+# for axis tick labels & axis lables
+Axis(p_fyke, side = 1, labelAdj = 0.3, interval = 2)
+yaxis <- Axis(p_fyke, side = 2, labelAdj = 0.4, format = TRUE)
+mtext(text = "Year", side = 1, line = 1.2)
+mtext(text = yaxis$AxisTitle(var = "Abundance"), side = 2, line = 2)
+
+# clean up
+rm(ydat, yaxis)
+
+```
+
+```{r eval=FALSE}
+
+# p_test$data()
+
+# plot(y = log(catch$FykeEstCI[37:45, "N"]), x = vapply(cpue_fyke$CpueDaily, FUN = function(d) mean(d[["CPUE"]], na.rm = T), FUN.VALUE = numeric(1L)))
+# # abline(a = 0, b = 1, col = 2)
+# abline(lm(log(catch$FykeEstCI[37:45, "N"]) ~ vapply(cpue_fyke$CpueDaily, FUN = function(d) mean(d[["CPUE"]], na.rm = T), FUN.VALUE = numeric(1L))), col = 3)
+# 
+# 
+# summary(lm(log(catch$FykeEstCI[37:45, "N"]) ~ vapply(cpue_fyke$CpueDaily, FUN = function(d) mean(d[["CPUE"]], na.rm = T), FUN.VALUE = numeric(1L))))
+# 
+# 
+# sqrt(0.5517)
+# 
+# exp(10)
+# 
+# log(20000)
+
+```

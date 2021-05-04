@@ -1,0 +1,11 @@
+{
+    "dialog-state" : {
+        "caseSensitive" : false,
+        "filePatterns" : [
+        ],
+        "path" : "/review",
+        "projectRelative" : true,
+        "query" : "SpeciesCode",
+        "regex" : false
+    }
+}
